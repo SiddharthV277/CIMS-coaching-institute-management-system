@@ -108,17 +108,6 @@ Turning real-world administrative problems into structured digital systems using
 
 ---
 
-## Screenshots
-
-Dashboard.png
-Student_records.png
-Fees_management.png
-Login.png
-Admission_request.png
-Batch_management.png
-Staff_management.png
-
----
 
 ## License
 
