@@ -263,26 +263,53 @@ if(empty($final_admission_date) || $final_admission_date == '0000-00-00'){
     $final_admission_date = date("Y-m-d");
 }
 
-            $stmt = $conn->prepare("
-            
-                INSERT INTO students (
-                    admission_no, full_name, dob, gender, phone, email, photo,
-                    father_name, mother_name, guardian_phone,
-                    address, city, state, pincode,
-                    course, batch_id, admission_date,
-                    course_duration, total_fees, fees_paid,
-                    status, sequence_no,
-                    medium, institution_name, institution_address,
-                    degree, percentage, main_subjects, passing_year,heard_about,
-referred_student_name,
-referred_student_phone,
-heard_other_text
-                )
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-            ");
+$stmt = $conn->prepare("
+INSERT INTO students (
+    admission_no,
+    full_name,
+    dob,
+    gender,
+    phone,
+    email,
+    photo,
+    father_name,
+    mother_name,
+    guardian_phone,
+    address,
+    city,
+    state,
+    pincode,
+    course,
+    batch,
+    admission_date,
+    course_duration,
+    total_fees,
+    fees_paid,
+    status,
+    sequence_no,
+    medium,
+    institution_name,
+    institution_address,
+    degree,
+    percentage,
+    main_subjects,
+    passing_year,
+    discount_type,
+    discount_percent,
+    discount_amount,
+    final_total,
+    payment_structure,
+    heard_about,
+    referred_student_name,
+    referred_student_phone,
+    heard_other_text,
+    batch_id
+)
+VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+");
 
 $stmt->bind_param(
-"sssssssssssssssissddissssssssssss",
+"ssssssssssssssssssddsissssssssdddsssssi",
 $admission_no,
 $request['full_name'],
 $request['dob'],
@@ -298,7 +325,7 @@ $request['city'],
 $request['state'],
 $request['pincode'],
 $request['course'],
-$batch_id,
+$request['batch'],
 $final_admission_date,
 $request['course_duration'],
 $course_fee,
@@ -312,12 +339,17 @@ $request['degree'],
 $request['percentage'],
 $request['main_subjects'],
 $request['passing_year'],
+$request['discount_type'],
+$request['discount_percent'],
+$request['discount_amount'],
+$request['final_total'],
+$request['payment_structure'],
 $request['heard_about'],
 $request['referred_student_name'],
 $request['referred_student_phone'],
-$request['heard_other_text']
+$request['heard_other_text'],
+$batch_id
 );
-
             $stmt->execute();
             $student_id = $stmt->insert_id;
 
