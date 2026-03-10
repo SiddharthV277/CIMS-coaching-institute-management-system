@@ -21,13 +21,13 @@ require_once __DIR__ . "/auth.php";
 }
 
 /* Topbar */
-.topbar {
-    background: #FFFFFF;
-    padding: 18px 30px;
-    border-bottom: 1px solid #E6DCD4;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.topbar{
+background:#FFFFFF;
+padding:18px 30px;
+border-bottom:1px solid #E6DCD4;
+display:flex;
+justify-content:space-between;
+align-items:center;
 }
 
 .topbar h3 {
@@ -528,14 +528,66 @@ input[type="file"] {
 .ref-checkbox input {
     accent-color: #4f46e5;
 }
+.analytics-btn{
+display:inline-block;
+background:linear-gradient(135deg,#7A1E3A,#9C2F4E);
+color:#fff;
+padding:8px 16px;
+border-radius:6px;
+font-size:13px;
+font-weight:600;
+text-decoration:none;
+box-shadow:0 3px 8px rgba(0,0,0,0.15);
+transition:all .25s ease;
+}
+
+.analytics-btn:hover{
+transform:translateY(-1px);
+box-shadow:0 5px 10px rgba(0,0,0,0.2);
+background:linear-gradient(135deg,#65182f,#872742);
+}
+.topbar-left{
+display:flex;
+align-items:center;
+}
+
+.topbar-right{
+display:flex;
+align-items:center;
+gap:12px;
+}
+.welcome-text{
+font-size:15px;
+font-weight:600;
+color:#3B2F2F;
+}
     </style>
 </head>
 
 <body>
 
 <div class="topbar">
-    <h3>Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?></h3>
-    <a href="/cims/logout.php" class="logout-btn">Logout</a>
+
+<div class="topbar-left">
+<span class="welcome-text">
+Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?>
+</span>
+</div>
+
+<div class="topbar-right">
+
+<?php if($_SESSION['role']==='superadmin'): ?>
+<a href="/cims/analytics/export_page.php" class="analytics-btn">
+📊 Export Analytics
+</a>
+<?php endif; ?>
+
+<a href="/cims/logout.php" class="logout-btn">
+Logout
+</a>
+
+</div>
+
 </div>
 
 <div class="layout">

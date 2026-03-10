@@ -106,7 +106,7 @@ if ($amount > $final_total) {
         $amount = floatval($_POST['payment_amount']);
         $structure = $_POST['payment_structure'];
         $mode = $_POST['payment_mode'];
-        $payment_date = $_POST['payment_date'];
+        $payment_date = date("Y-m-d", strtotime($_POST['payment_date']));
 
         if ($amount <= 0) $error = "Payment amount must be greater than 0.";
         if ($amount > $course_fee) $error = "Amount cannot exceed total course fee.";
@@ -247,9 +247,36 @@ $admission_no = "VIG".$year."-".str_pad($sequence, 3, "0", STR_PAD_LEFT);
                     "../uploads/students/".$request['photo']
                 );
             }
+            /* Fetch course duration */
 
+$course_duration = "";
+
+$stmt = $conn->prepare("
+SELECT duration_months
+FROM courses
+WHERE course_name = ?
+LIMIT 1
+");
+
+$stmt->bind_param("s", $request['course']);
+$stmt->execute();
+$stmt->bind_result($course_duration);
+$stmt->fetch();
+$stmt->close();
             $fees_paid = $request['payment_amount'];
             $status_student = "Active";
+            /* Fetch latest payment data from admission_requests */
+$stmt_latest = $conn->prepare("
+SELECT payment_amount, payment_structure, payment_mode, payment_date, receipt_image, reviewed_by
+FROM admission_requests
+WHERE id = ?
+");
+
+$stmt_latest->bind_param("i", $id);
+$stmt_latest->execute();
+$result_latest = $stmt_latest->get_result();
+$latest = $result_latest->fetch_assoc();
+$stmt_latest->close();
             $date_option = $_POST['date_option'] ?? 'same';
 
 if($date_option === 'change' && !empty($_POST['custom_admission_date'])){
@@ -327,7 +354,7 @@ $request['pincode'],
 $request['course'],
 $request['batch'],
 $final_admission_date,
-$request['course_duration'],
+$course_duration,
 $course_fee,
 $fees_paid,
 $status_student,
@@ -370,17 +397,16 @@ $batch_id
                 VALUES (?,?,?,?,?,?,?)
             ");
 
-            $stmt->bind_param(
-                "idssssi",
-                $student_id,
-                $request['payment_amount'],
-                $request['payment_structure'],
-                $request['payment_mode'],
-                $request['payment_date'],
-                $request['receipt_image'],
-                $request['reviewed_by']
-            );
-
+$stmt->bind_param(
+"idssssi",
+$student_id,
+$latest['payment_amount'],
+$latest['payment_structure'],
+$latest['payment_mode'],
+date("Y-m-d", strtotime($latest['payment_date'])),
+$latest['receipt_image'],
+$latest['reviewed_by']
+);
             $stmt->execute();
 
             $stmt = $conn->prepare("UPDATE admission_requests SET status='Approved' WHERE id=?");
@@ -747,8 +773,8 @@ readonly>
 <br><br>
 
 <label>Payment Date *</label>
-<input type="text" name="payment_date"
-value="<?php echo $request['payment_date']; ?>" required>
+<input type="date" name="payment_date"
+value="<?php echo date("Y-m-d", strtotime($request['payment_date'])); ?>" required>
 
 <br><br>
 
@@ -848,7 +874,7 @@ document.addEventListener("DOMContentLoaded", function(){
 <p><strong>Amount Paid:</strong> <?php echo $request['payment_amount']; ?></p>
 <p><strong>Structure:</strong> <?php echo $request['payment_structure']; ?></p>
 <p><strong>Mode:</strong> <?php echo $request['payment_mode']; ?></p>
-<p><strong>Date:</strong> <?php echo $request['payment_date']; ?></p>
+<p><strong>Date:</strong> <?php echo date("Y-m-d", strtotime($request['payment_date'])); ?></p>
 
 <?php if(!empty($request['receipt_image'])): ?>
 <p>

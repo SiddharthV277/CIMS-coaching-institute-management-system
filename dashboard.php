@@ -195,8 +195,10 @@ $occupancy = ($total_capacity > 0)
         <p>Generate marksheets and certificates instantly.</p>
         <a href="#">Coming Soon</a>
     </div>
+    
 
     
 </div>
+
 
 <?php require_once "includes/footer.php"; ?>
