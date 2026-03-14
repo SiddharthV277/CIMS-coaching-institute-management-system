@@ -4,7 +4,15 @@ $conn = new mysqli("localhost", "root", "", "cims");
 
 $error = "";
 
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die("CSRF token validation failed. Please refresh.");
+    }
 
     $username = trim($_POST['username']);
     $password = trim($_POST['password']);
@@ -176,6 +184,7 @@ button:hover {
     <?php endif; ?>
 
     <form method="POST">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
         <div class="input-group">
             <label>Username</label>
             <input type="text" name="username" required>

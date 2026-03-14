@@ -1,6 +1,6 @@
 <?php
 require_once "../includes/auth.php";
-$conn = new mysqli("localhost", "root", "", "cims");
+require_once dirname(__DIR__) . '/includes/db.php';
 
 if (!isset($_GET['student_id'])) {
     header("Location: list.php");
@@ -61,36 +61,37 @@ if (isset($_POST['generate_plan'])) {
         $remaining = $final_total - $paid_amount;
         $admission_date = $student['admission_date'];
 
-        /* 2️⃣ Ensure installment #1 exists only once */
-        if ($paid_amount > 0) {
-
+        /* 2️⃣ Check how many paid installments exist */
+        $stmt = $conn->prepare("
+            SELECT COUNT(*), IFNULL(MAX(installment_no), 0)
+            FROM fee_installments 
+            WHERE student_id = ? AND status = 'paid'
+        ");
+        $stmt->bind_param("i", $student_id);
+        $stmt->execute();
+        $stmt->bind_result($paid_count, $max_installment_paid);
+        $stmt->fetch();
+        $stmt->close();
+        
+        /* If no installments exist but they paid something, synthesize receipt 1 */
+        if ($paid_amount > 0 && $paid_count == 0) {
             $stmt = $conn->prepare("
-                SELECT COUNT(*) 
-                FROM fee_installments 
-                WHERE student_id = ? AND installment_no = 1
+                INSERT INTO fee_installments
+                (student_id, installment_no, amount, paid_amount, due_date, status, fine_amount, created_at)
+                VALUES (?, 1, ?, ?, ?, 'paid', 0, NOW())
             ");
-            $stmt->bind_param("i", $student_id);
+            $stmt->bind_param("idds", $student_id, $paid_amount, $paid_amount, $admission_date);
             $stmt->execute();
-            $stmt->bind_result($first_exists);
-            $stmt->fetch();
             $stmt->close();
-
-            if ($first_exists == 0) {
-                $stmt = $conn->prepare("
-                    INSERT INTO fee_installments
-                    (student_id, installment_no, amount, due_date, status, fine_amount, created_at)
-                    VALUES (?, 1, ?, ?, 'paid', 0, NOW())
-                ");
-                $stmt->bind_param("ids", $student_id, $paid_amount, $admission_date);
-                $stmt->execute();
-                $stmt->close();
-            }
+            
+            $max_installment_paid = 1;
+            $paid_count = 1;
         }
 
-        $start_index = ($paid_amount > 0) ? 2 : 1;
-        $remaining_installments = $total_installments - ($paid_amount > 0 ? 1 : 0);
+        $remaining_installments = $total_installments - $paid_count;
+        $start_index = $max_installment_paid + 1;
 
-        /* 3️⃣ Generate new pending installments */
+        /* 3️⃣ Generate new pending installments logically spaced */
         if ($remaining_installments > 0 && $remaining > 0) {
 
             $amount_per_installment =
@@ -101,9 +102,11 @@ if (isset($_POST['generate_plan'])) {
 
             for ($i = $start_index; $i <= $total_installments; $i++) {
 
+                // Calculate due date based on index offset
+                $month_offset = $i - 1; 
                 $due_date = date(
                     'Y-m-d',
-                    strtotime("+".($i-1)." month", strtotime($admission_date))
+                    strtotime("+".$month_offset." month", strtotime($admission_date))
                 );
 
                 $amount_to_insert = ($i == $total_installments)
@@ -154,81 +157,7 @@ require_once "../includes/header.php";
 require_once "../includes/sidebar.php";
 ?>
 
-<style>
-.card {
-    background:#fff;
-    padding:30px;
-    border-radius:18px;
-    border:1px solid #E6DCD4;
-    margin-bottom:30px;
-    box-shadow:0 10px 25px rgba(0,0,0,0.05);
-}
 
-.summary-grid {
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-    gap:15px;
-    margin-top:15px;
-}
-
-.summary-box {
-    background:#F9F5F2;
-    padding:18px;
-    border-radius:12px;
-    text-align:center;
-}
-
-.summary-box strong {
-    display:block;
-    font-size:13px;
-    color:#777;
-}
-
-.summary-box span {
-    font-size:18px;
-    font-weight:700;
-}
-
-.table {
-    width:100%;
-    border-collapse:collapse;
-}
-
-.table th {
-    background:#F3ECE6;
-    padding:14px;
-    text-align:left;
-}
-
-.table td {
-    padding:14px;
-    border-bottom:1px solid #E6DCD4;
-}
-
-.table tr:hover {
-    background:#FAF7F5;
-}
-
-.btn {
-    padding:10px 20px;
-    border:none;
-    border-radius:8px;
-    background:#7A1E3A;
-    color:#fff;
-    font-weight:600;
-    cursor:pointer;
-}
-
-.status-paid {
-    color:#27AE60;
-    font-weight:700;
-}
-
-.status-pending {
-    color:#C0392B;
-    font-weight:700;
-}
-</style>
 
 <h2>Manage Fees</h2>
 
@@ -262,6 +191,7 @@ require_once "../includes/sidebar.php";
 <?php if ($remaining > 0): ?>
 <div class="card">
 <form method="POST">
+<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
 <label><strong>Number of Installments</strong></label><br><br>
 <input type="number" name="total_installments" min="1" max="24" required>
 <button type="submit" name="generate_plan" class="btn">
@@ -281,18 +211,69 @@ Generate / Regenerate Plan
 <th>Status</th>
 </tr>
 
-<?php while($row = $installments->fetch_assoc()): ?>
-<tr>
+<?php 
+$first_pending_found = false;
+while($row = $installments->fetch_assoc()): 
+    $is_overdue = ($row['status'] == 'pending' && strtotime($row['due_date']) < strtotime('today'));
+?>
+<tr style="<?php echo $is_overdue ? 'background-color: #ffeaea;' : ''; ?>">
 <td><?php echo $row['installment_no']; ?></td>
 <td>₹<?php echo number_format($row['amount'],2); ?></td>
-<td><?php echo $row['due_date']; ?></td>
+<td style="<?php echo $is_overdue ? 'color: red; font-weight: bold;' : ''; ?>">
+    <?php echo date('d-m-Y', strtotime($row['due_date'])); ?>
+</td>
 <td class="<?php echo $row['status']=='paid'?'status-paid':'status-pending'; ?>">
-<?php echo strtoupper($row['status']); ?>
+<?php 
+if ($row['status'] == 'paid') {
+    echo "PAID";
+} else {
+    echo "PENDING " . ($is_overdue ? " (OVERDUE)" : "");
+    if (!$first_pending_found) {
+        $first_pending_found = true;
+        echo '<br><br><button type="button" onclick="openPayModal(' . $row['id'] . ', ' . $row['amount'] . ', \'' . $row['installment_no'] . '\')" style="background:#27AE60; color:#fff; border:none; padding:5px 10px; border-radius:4px; font-weight:bold; cursor:pointer;">Pay Now</button>';
+    }
+}
+?>
 </td>
 </tr>
 <?php endwhile; ?>
 </table>
 </div>
 <?php endif; ?>
+
+<!-- Payment Verification Modal -->
+<div id="payModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
+    <div class="modal-content" style="background:#fff; padding:30px; border-radius:12px; width:400px; text-align:center; position:relative;">
+        <h3 style="margin-top:0; color:#333;">Process Installment Payment</h3>
+        <p style="color:#666; font-size:14px; margin-bottom:20px;">Please enter your admin password to officially record this <strong id="modalDisplayAmount"></strong> payment for Installment #<span id="modalDisplayInstallmentNo"></span>.</p>
+        
+        <form action="process_installment_payment.php" method="POST">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
+            <input type="hidden" name="student_id" value="<?php echo $student_id; ?>">
+            <input type="hidden" name="installment_id" id="modalInstallmentId" value="">
+            <input type="hidden" name="payment_amount" id="modalPaymentAmount" value="">
+            
+            <input type="password" name="admin_password" placeholder="Admin Password" required style="width:100%; padding:10px; box-sizing:border-box; border:1px solid #ccc; border-radius:6px; margin-bottom:20px;">
+            
+            <div style="display:flex; justify-content:space-between; gap:10px;">
+                <button type="button" onclick="closePayModal()" style="padding:10px 20px; background:#ddd; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">Cancel</button>
+                <button type="submit" style="padding:10px 20px; background:#27AE60; color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">Confirm Payment</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openPayModal(id, amount, i_no) {
+    document.getElementById('modalInstallmentId').value = id;
+    document.getElementById('modalPaymentAmount').value = amount;
+    document.getElementById('modalDisplayAmount').innerText = '₹' + parseFloat(amount).toFixed(2);
+    document.getElementById('modalDisplayInstallmentNo').innerText = i_no;
+    document.getElementById('payModal').style.display = 'flex';
+}
+function closePayModal() {
+    document.getElementById('payModal').style.display = 'none';
+}
+</script>
 
 <?php require_once "../includes/footer.php"; ?>

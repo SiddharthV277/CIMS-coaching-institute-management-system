@@ -1,6 +1,6 @@
 <?php
 require_once "../includes/auth.php";
-$conn = new mysqli("localhost", "root", "", "cims");
+require_once dirname(__DIR__) . '/includes/db.php';
 
 /* ================= FETCH STUDENTS WITH INSTALLMENT DATA ================= */
 
@@ -31,44 +31,7 @@ require_once "../includes/header.php";
 require_once "../includes/sidebar.php";
 ?>
 
-<style>
-.table-wrapper {
-    background:#fff;
-    padding:30px;
-    border-radius:16px;
-    border:1px solid #E6DCD4;
-}
 
-.fee-table {
-    width:100%;
-    border-collapse:collapse;
-}
-
-.fee-table th,
-.fee-table td {
-    padding:12px;
-    border-bottom:1px solid #E6DCD4;
-    font-size:14px;
-}
-
-.fee-table th {
-    background:#F9F3F6;
-}
-
-.status-clear { color:#27AE60; font-weight:600; }
-.status-overdue { color:#C0392B; font-weight:600; }
-.status-active { color:#D35400; font-weight:600; }
-.status-plan { color:#7F8C8D; font-weight:600; }
-
-.action-btn {
-    padding:6px 12px;
-    border-radius:6px;
-    background:#7A1E3A;
-    color:#fff;
-    text-decoration:none;
-    font-size:13px;
-}
-</style>
 
 <h2>Fee Management</h2>
 
@@ -113,7 +76,7 @@ elseif ($overdue_installments > 0) {
 }
 else {
     $status = "ACTIVE";
-    $status_class = "status-active";
+    $status_class = "status-active-fee";
 }
 
 ?>

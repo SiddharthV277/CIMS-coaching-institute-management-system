@@ -13,13 +13,31 @@ while($row = $courses_result->fetch_assoc()){
     $courses[] = $row;
 }
 
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die("CSRF token validation failed. Please refresh.");
+    }
 
     /* ================= PHOTO UPLOAD ================= */
 
     $photo = NULL;
 
-    if (!empty($_FILES['photo']['name'])) {
+    if (!empty($_POST['camera_photo'])) {
+        $base64_string = $_POST['camera_photo'];
+        list($type, $data) = explode(';', $base64_string);
+        list(, $data)      = explode(',', $data);
+        $data = base64_decode($data);
+        
+        $new_name = time()."_".rand(1000,9999).".jpg";
+        file_put_contents("uploads/requests/".$new_name, $data);
+        $photo = $new_name;
+    }
+    elseif (!empty($_FILES['photo']['name'])) {
 
         $file_name = $_FILES['photo']['name'];
         $tmp_name  = $_FILES['photo']['tmp_name'];
@@ -98,6 +116,10 @@ $referred_name = $_POST['referred_student_name'] ?? NULL;
 $referred_phone = $_POST['referred_student_phone'] ?? NULL;
 $heard_other_text = $_POST['heard_other_text'] ?? NULL;
 
+        $course = $_POST['course'] === 'Other' ? $_POST['custom_course_name'] : $_POST['course'];
+        $duration = $_POST['course'] === 'Other' ? $_POST['custom_course_duration'] . " Months" : $_POST['course_duration'];
+        $fee = $_POST['course'] === 'Other' ? $_POST['custom_total_fees'] : $_POST['total_fees'];
+
         $stmt = $conn->prepare("
             INSERT INTO admission_requests (
                 full_name, dob, gender, phone, email, photo,
@@ -129,11 +151,11 @@ $_POST['address'],
 $_POST['city'],
 $_POST['state'],
 $_POST['pincode'],
-$_POST['course'],
+$course,
 $_POST['batch'],
 $_POST['admission_date'],
-$_POST['course_duration'],
-$_POST['total_fees'],
+$duration,
+$fee,
 $_POST['medium'],
 $_POST['institution_name'],
 $_POST['institution_address'],
@@ -374,6 +396,7 @@ transform:rotate(45deg);
 <?php endif; ?>
 
 <form method="POST" enctype="multipart/form-data">
+<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
 <div class="form-grid">
 
 <div class="section-title">Basic Information</div>
@@ -381,7 +404,7 @@ transform:rotate(45deg);
 <input type="text" name="full_name" placeholder="Full Name" required>
 <div class="floating-group">
     <input type="date" name="dob" required>
-    <label>D.O.B</label>
+    <label>D.O.B (DD-MM-YYYY)</label>
 </div>  
 
 <select name="gender" required>
@@ -395,8 +418,32 @@ transform:rotate(45deg);
 <input type="email" name="email" placeholder="Email">
 
 <div class="full-width">
-<label>Upload Photograph (Max 1MB)</label>
-<input type="file" name="photo" accept="image/jpeg,image/png">
+    <label style="display:block; margin-bottom:10px;">Student Photograph</label>
+    
+    <div style="display:flex; gap:15px; margin-bottom:15px;">
+        <label style="cursor:pointer;"><input type="radio" name="photo_source" value="upload" checked onchange="togglePhotoSource()"> Upload File</label>
+        <label style="cursor:pointer;"><input type="radio" name="photo_source" value="camera" onchange="togglePhotoSource()"> Take Photo</label>
+    </div>
+
+    <!-- Upload Interface -->
+    <div id="uploadInterface">
+        <input type="file" name="photo" id="photoFile" accept="image/jpeg,image/png">
+        <small style="color:#666;">Max size 1MB. Allowed: JPG, PNG.</small>
+    </div>
+
+    <!-- Camera Interface -->
+    <div id="cameraInterface" style="display:none; text-align:center; background:#f9f9f9; padding:15px; border-radius:12px; border:1px solid #ddd;">
+        <video id="cameraStream" width="100%" max-width="400" autoplay playsinline style="border-radius:8px; background:#000; transform: scaleX(-1);"></video>
+        <canvas id="cameraCanvas" style="display:none;"></canvas>
+        <img id="photoPreview" style="display:none; width:100%; max-width:400px; border-radius:8px; margin: 0 auto;">
+        
+        <input type="hidden" name="camera_photo" id="cameraPhotoData">
+        
+        <div style="margin-top:10px; display:flex; gap:10px; justify-content:center;">
+            <button type="button" id="btnCapture" onclick="takePhoto()" style="padding:10px 20px; font-size:14px; background:#C0392B;">📸 Capture Photo</button>
+            <button type="button" id="btnRetake" onclick="retakePhoto()" style="display:none; padding:10px 20px; font-size:14px; background:#555;">🔄 Retake</button>
+        </div>
+    </div>
 </div>
 
 <div class="section-title">Parent & Address Details</div>
@@ -421,7 +468,16 @@ data-fee="<?php echo $course['fees']; ?>">
 <?php echo $course['course_name']; ?>
 </option> 
 <?php endforeach; ?>
+<option value="Other">Other (Custom Course)</option>
 </select>
+
+<div id="customCourseBox" style="display:none; background:#f9f9f9; padding:15px; border-radius:12px; border:1px solid #ddd; margin-bottom:15px; grid-column:1/-1;">
+    <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr; gap:15px;">
+        <input type="text" name="custom_course_name" id="customCourseName" placeholder="Custom Course Name">
+        <input type="number" name="custom_course_duration" id="customDuration" placeholder="Duration (Months)">
+        <input type="number" name="custom_total_fees" id="customFees" placeholder="Total Fees (₹)">
+    </div>
+</div>
 
 <select name="batch" required>
 <option value="">Select Preferred Time Slot</option>
@@ -439,7 +495,7 @@ data-fee="<?php echo $course['fees']; ?>">
 
 <div class="floating-group">
     <input type="date" name="admission_date" required>
-    <label>Date of Form-filling</label>
+    <label>Date of Form-filling (DD-MM-YYYY)</label>
 </div>
 <input type="text" name="course_duration" id="durationField" placeholder="Course Duration" readonly>
 <input type="number" name="total_fees" id="feeField" placeholder="Total Fees" readonly>
@@ -516,11 +572,29 @@ data-fee="<?php echo $course['fees']; ?>">
 
 <script>
 document.getElementById("courseSelect").addEventListener("change",function(){
-let selected=this.options[this.selectedIndex];
-document.getElementById("durationField").value=
-selected.getAttribute("data-duration")+" Months";
-document.getElementById("feeField").value=
-selected.getAttribute("data-fee");
+    let selected = this.options[this.selectedIndex];
+    
+    if (selected.value === 'Other') {
+        document.getElementById("customCourseBox").style.display = "block";
+        document.getElementById("durationField").value = "Custom";
+        document.getElementById("feeField").value = "Custom";
+        document.getElementById("customCourseName").required = true;
+        document.getElementById("customDuration").required = true;
+        document.getElementById("customFees").required = true;
+    } else {
+        document.getElementById("customCourseBox").style.display = "none";
+        document.getElementById("customCourseName").required = false;
+        document.getElementById("customDuration").required = false;
+        document.getElementById("customFees").required = false;
+        
+        if (selected.value) {
+            document.getElementById("durationField").value = selected.getAttribute("data-duration") + " Months";
+            document.getElementById("feeField").value = selected.getAttribute("data-fee");
+        } else {
+            document.getElementById("durationField").value = "";
+            document.getElementById("feeField").value = "";
+        }
+    }
 });
 </script>
 <script>
@@ -534,6 +608,100 @@ function toggleOther() {
     const otherChecked = document.querySelector('input[value="Others"]').checked;
     document.getElementById("otherBox").style.display =
         otherChecked ? "block" : "none";
+}
+
+// Camera Logic
+let videoStream = null;
+
+function togglePhotoSource() {
+    let source = document.querySelector('input[name="photo_source"]:checked').value;
+    let uploadDiv = document.getElementById('uploadInterface');
+    let cameraDiv = document.getElementById('cameraInterface');
+    let fileInput = document.getElementById('photoFile');
+    let cameraData = document.getElementById('cameraPhotoData');
+    
+    if (source === 'upload') {
+        uploadDiv.style.display = 'block';
+        cameraDiv.style.display = 'none';
+        cameraData.value = ""; // Clear camera data
+        stopCamera();
+    } else {
+        uploadDiv.style.display = 'none';
+        cameraDiv.style.display = 'block';
+        fileInput.value = ""; // Clear file input
+        startCamera();
+    }
+}
+
+function startCamera() {
+    let video = document.getElementById('cameraStream');
+    let preview = document.getElementById('photoPreview');
+    let btnCapture = document.getElementById('btnCapture');
+    let btnRetake = document.getElementById('btnRetake');
+    
+    // Reset view
+    video.style.display = 'block';
+    preview.style.display = 'none';
+    btnCapture.style.display = 'inline-block';
+    btnRetake.style.display = 'none';
+    document.getElementById('cameraPhotoData').value = "";
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+    .then(function(stream) {
+        videoStream = stream;
+        video.srcObject = stream;
+    })
+    .catch(function(err) {
+        alert("Camera access denied or device not found.");
+        document.querySelector('input[value="upload"]').click(); // Revert to upload
+    });
+}
+
+function stopCamera() {
+    if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+        videoStream = null;
+    }
+}
+
+function takePhoto() {
+    let video = document.getElementById('cameraStream');
+    let canvas = document.getElementById('cameraCanvas');
+    let preview = document.getElementById('photoPreview');
+    let cameraData = document.getElementById('cameraPhotoData');
+    let btnCapture = document.getElementById('btnCapture');
+    let btnRetake = document.getElementById('btnRetake');
+    
+    // Set canvas dimensions to match video stream
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    let ctx = canvas.getContext('2d');
+    
+    // Mirror the image horizontally if the video is mirrored
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Compress at 60% JPEG quality
+    let dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+    
+    // Apply data to hidden input and preview
+    cameraData.value = dataUrl;
+    preview.src = dataUrl;
+    
+    // Switch to preview mode
+    video.style.display = 'none';
+    preview.style.display = 'block';
+    btnCapture.style.display = 'none';
+    btnRetake.style.display = 'inline-block';
+    
+    // Pause stream
+    stopCamera();
+}
+
+function retakePhoto() {
+    startCamera();
 }
 </script>
 

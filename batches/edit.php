@@ -2,7 +2,7 @@
 require_once "../includes/auth.php";
 require_once "../includes/superadmin_only.php";
 
-$conn = new mysqli("localhost", "root", "", "cims");
+require_once dirname(__DIR__) . '/includes/db.php';
 
 if (!isset($_GET['id'])) {
     header("Location: list.php");
@@ -80,51 +80,7 @@ require_once "../includes/header.php";
 require_once "../includes/sidebar.php";
 ?>
 
-<style>
-.section-card{
-    background:#fff;
-    padding:35px;
-    border-radius:16px;
-    border:1px solid #E6DCD4;
-    box-shadow:0 20px 40px rgba(0,0,0,0.05);
-    margin-bottom:30px;
-}
 
-.form-grid{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:25px 30px;
-}
-
-.full-width{
-    grid-column:1/-1;
-}
-
-input, select{
-    width:100%;
-    padding:12px;
-    border-radius:10px;
-    border:1px solid #D8CCC3;
-}
-
-.submit-btn{
-    background:#7A1E3A;
-    color:#fff;
-    padding:12px 25px;
-    border:none;
-    border-radius:8px;
-    cursor:pointer;
-    margin-top:20px;
-}
-
-.info-box{
-    background:#F9F3F6;
-    padding:15px;
-    border-radius:10px;
-    margin-bottom:20px;
-    font-size:14px;
-}
-</style>
 
 <h2>Edit Batch <?php echo $batch['batch_name']; ?></h2>
 
@@ -148,6 +104,7 @@ input, select{
 </div>
 
 <form method="POST">
+<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
 
 <div class="form-grid">
 

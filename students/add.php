@@ -6,7 +6,7 @@ if ($_SESSION['role'] !== 'superadmin') {
     exit();
 }
 
-$conn = new mysqli("localhost", "root", "", "cims");
+require_once dirname(__DIR__) . '/includes/db.php';
 
 $error = "";
 
@@ -68,7 +68,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     /* ================= PHOTO ================= */
 
     $photo = NULL;
-    if (!empty($_FILES['photo']['name'])) {
+    if (!empty($_POST['camera_photo'])) {
+        $base64_string = $_POST['camera_photo'];
+        list($type, $data) = explode(';', $base64_string);
+        list(, $data)      = explode(',', $data);
+        $data = base64_decode($data);
+        
+        $new_name = $admission_no.".jpg";
+        file_put_contents("../uploads/students/".$new_name, $data);
+        $photo = $new_name;
+    }
+    elseif (!empty($_FILES['photo']['name'])) {
 
         $extension = strtolower(pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION));
         $allowed = ['jpg','jpeg','png'];
@@ -188,11 +198,24 @@ VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
             /* ===== PREP VARIABLES FOR BINDING ===== */
 
 $discount_type = ($discount_amount > 0) ? "Amount" : "Percent";
-$final_total_value = $total_fees;   // Your calculated final total
-$batch_value = $batch_id;          // If you store batch separately
+$final_total_value = $new_base + REG_FEE + EXAM_FEE;   
+
+// Fetch batch name
+$stmt_b = $conn->prepare("SELECT batch_name FROM batches WHERE id=?");
+$stmt_b->bind_param("i", $batch_id);
+$stmt_b->execute();
+$stmt_b->bind_result($batch_name);
+$stmt_b->fetch();
+$stmt_b->close();
+
+$batch_value = $batch_name ? $batch_name : $batch_id;
+
+$course = $_POST['course'] === 'Other' ? $_POST['custom_course_name'] : $_POST['course'];
+$duration = $_POST['course'] === 'Other' ? $_POST['custom_course_duration'] . " Months" : $_POST['course_duration'];
+$fee = $_POST['course'] === 'Other' ? $_POST['custom_total_fees'] : $total_fees;
 
 $stmt->bind_param(
-"sssssssssssssssisddsisssssdssdddssssssi",
+"ssssssssssssssssssddsissssssssdddsssssi",
 $admission_no,
 $_POST['full_name'],
 $_POST['dob'],
@@ -207,31 +230,31 @@ $_POST['address'],
 $_POST['city'],
 $_POST['state'],
 $_POST['pincode'],
-$_POST['course'],
-$batch_value,                // i
+$course,
+$batch_value,                
 $_POST['admission_date'],
-$_POST['course_duration'],
-$total_fees,                 // d
-$payment_amount,             // d
+$duration,
+$fee,                 
+$payment_amount,             
 $status,
-$sequence,                   // i
+$sequence,                   
 $_POST['medium'],
 $_POST['institution_name'],
 $_POST['institution_address'],
 $_POST['degree'],
-$_POST['percentage'],        // d
+$_POST['percentage'],        
 $_POST['main_subjects'],
 $_POST['passing_year'],
 $discount_type,
-$discount_percent,           // d
-$discount_amount,            // d
-$final_total_value,          // d
+$discount_percent,           
+$discount_amount,            
+$final_total_value,          
 $_POST['payment_structure'],
 $heard_about,
 $_POST['referred_student_name'],
 $_POST['referred_student_phone'],
 $_POST['heard_other_text'],
-$batch_id                    // i
+$batch_id                    
 );
             $stmt->execute();
             $student_id = $stmt->insert_id;
@@ -280,6 +303,7 @@ require_once "../includes/sidebar.php";
 <?php endif; ?>
 
 <form method="POST" enctype="multipart/form-data">
+<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
 
 <!-- Basic Info -->
 <div class="section-card">
@@ -287,7 +311,10 @@ require_once "../includes/sidebar.php";
 <div class="form-grid">
 
 <input type="text" name="full_name" placeholder="Full Name" required>
-<input type="date" name="dob">
+<div>
+    <label style="font-size:12px; color:#666; display:block; margin-bottom:5px;">Date of Birth (DD-MM-YYYY)</label>
+    <input type="date" name="dob">
+</div>
 <select name="gender">
 <option>Male</option>
 <option>Female</option>
@@ -297,8 +324,32 @@ require_once "../includes/sidebar.php";
 <input type="email" name="email" placeholder="Email">
 
 <div class="full-width">
-<label>Photo (Max 1MB)</label>
-<input type="file" name="photo" accept="image/jpeg,image/png">
+    <label style="display:block; margin-bottom:10px;">Student Photograph</label>
+    
+    <div style="display:flex; gap:15px; margin-bottom:15px;">
+        <label style="cursor:pointer;"><input type="radio" name="photo_source" value="upload" checked onchange="togglePhotoSource()"> Upload File</label>
+        <label style="cursor:pointer;"><input type="radio" name="photo_source" value="camera" onchange="togglePhotoSource()"> Take Photo</label>
+    </div>
+
+    <!-- Upload Interface -->
+    <div id="uploadInterface">
+        <input type="file" name="photo" id="photoFile" accept="image/jpeg,image/png">
+        <small style="color:#666;">Max size 1MB. Allowed: JPG, PNG.</small>
+    </div>
+
+    <!-- Camera Interface -->
+    <div id="cameraInterface" style="display:none; text-align:center; background:#f9f9f9; padding:15px; border-radius:12px; border:1px solid #ddd;">
+        <video id="cameraStream" style="width:100%; max-width:400px; border-radius:8px; background:#000; transform: scaleX(-1);" autoplay playsinline></video>
+        <canvas id="cameraCanvas" style="display:none;"></canvas>
+        <img id="photoPreview" style="display:none; width:100%; max-width:400px; border-radius:8px; margin: 0 auto;">
+        
+        <input type="hidden" name="camera_photo" id="cameraPhotoData">
+        
+        <div style="margin-top:10px; display:flex; gap:10px; justify-content:center;">
+            <button type="button" id="btnCapture" onclick="takePhoto()" style="padding:10px 20px; font-size:14px; background:#C0392B; color:#fff; border:none; border-radius:8px; cursor:pointer;">📸 Capture Photo</button>
+            <button type="button" id="btnRetake" onclick="retakePhoto()" style="display:none; padding:10px 20px; font-size:14px; background:#555; color:#fff; border:none; border-radius:8px; cursor:pointer;">🔄 Retake</button>
+        </div>
+    </div>
 </div>
 
 </div>
@@ -446,11 +497,23 @@ require_once "../includes/sidebar.php";
                     <?php echo $course['course_name']; ?>
                 </option>
             <?php endforeach; ?>
+            <option value="Other">Other (Custom Course)</option>
         </select>
+        
+        <div id="customCourseBox" style="display:none; background:#f9f9f9; padding:15px; border-radius:12px; border:1px solid #ddd; margin-bottom:15px; grid-column:1/-1;">
+            <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr; gap:15px;">
+                <input type="text" name="custom_course_name" id="customCourseName" placeholder="Custom Course Name">
+                <input type="number" name="custom_course_duration" id="customDuration" placeholder="Duration (Months)">
+                <input type="number" name="custom_total_fees" id="customFees" placeholder="Total Fees (₹)">
+            </div>
+        </div>
 
         <input type="text" name="course_duration" id="durationField" readonly placeholder="Course Duration">
 
-        <input type="date" name="admission_date" required>
+        <div>
+            <label style="font-size:12px; color:#666; display:block; margin-bottom:5px;">Admission Date (DD-MM-YYYY)</label>
+            <input type="date" name="admission_date" required>
+        </div>
 
         <select name="batch_id" required>
 <option value="">Select Batch</option>
@@ -489,7 +552,12 @@ Batch <?= $batch['batch_name']; ?>
         </div>
 
         <div>
-            <label>Final Total</label>
+            <label>Amount After Discount</label>
+            <input type="number" id="amountAfterDiscount" readonly>
+        </div>
+
+        <div>
+            <label>Final Payable Total (+ Reg & Exam Fees)</label>
             <input type="number" id="finalTotalDisplay" readonly>
         </div>
 
@@ -530,7 +598,10 @@ Batch <?= $batch['batch_name']; ?>
             <option value="Online">Online</option>
         </select>
 
-        <input type="date" name="payment_date" required>
+        <div>
+            <label style="font-size:12px; color:#666; display:block; margin-bottom:5px;">Payment Date (DD-MM-YYYY)</label>
+            <input type="date" name="payment_date" required>
+        </div>
 
         <div class="full-width">
             <label>Upload Receipt (Max 2MB)</label>
@@ -545,6 +616,100 @@ Batch <?= $batch['batch_name']; ?>
 </form>
 
 <script>
+// Camera Logic
+let videoStream = null;
+
+function togglePhotoSource() {
+    let source = document.querySelector('input[name="photo_source"]:checked').value;
+    let uploadDiv = document.getElementById('uploadInterface');
+    let cameraDiv = document.getElementById('cameraInterface');
+    let fileInput = document.getElementById('photoFile');
+    let cameraData = document.getElementById('cameraPhotoData');
+    
+    if (source === 'upload') {
+        uploadDiv.style.display = 'block';
+        cameraDiv.style.display = 'none';
+        cameraData.value = ""; // Clear camera data
+        stopCamera();
+    } else {
+        uploadDiv.style.display = 'none';
+        cameraDiv.style.display = 'block';
+        fileInput.value = ""; // Clear file input
+        startCamera();
+    }
+}
+
+function startCamera() {
+    let video = document.getElementById('cameraStream');
+    let preview = document.getElementById('photoPreview');
+    let btnCapture = document.getElementById('btnCapture');
+    let btnRetake = document.getElementById('btnRetake');
+    
+    // Reset view
+    video.style.display = 'block';
+    preview.style.display = 'none';
+    btnCapture.style.display = 'inline-block';
+    btnRetake.style.display = 'none';
+    document.getElementById('cameraPhotoData').value = "";
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+    .then(function(stream) {
+        videoStream = stream;
+        video.srcObject = stream;
+    })
+    .catch(function(err) {
+        alert("Camera access denied or device not found.");
+        document.querySelector('input[value="upload"]').click(); // Revert to upload
+    });
+}
+
+function stopCamera() {
+    if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+        videoStream = null;
+    }
+}
+
+function takePhoto() {
+    let video = document.getElementById('cameraStream');
+    let canvas = document.getElementById('cameraCanvas');
+    let preview = document.getElementById('photoPreview');
+    let cameraData = document.getElementById('cameraPhotoData');
+    let btnCapture = document.getElementById('btnCapture');
+    let btnRetake = document.getElementById('btnRetake');
+    
+    // Set canvas dimensions to match video stream
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    let ctx = canvas.getContext('2d');
+    
+    // Mirror the image horizontally if the video is mirrored
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Compress at 60% JPEG quality
+    let dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+    
+    // Apply data to hidden input and preview
+    cameraData.value = dataUrl;
+    preview.src = dataUrl;
+    
+    // Switch to preview mode
+    video.style.display = 'none';
+    preview.style.display = 'block';
+    btnCapture.style.display = 'none';
+    btnRetake.style.display = 'inline-block';
+    
+    // Pause stream
+    stopCamera();
+}
+
+function retakePhoto() {
+    startCamera();
+}
+
 const REG = 550;
 const EXAM = 670;
 
@@ -579,6 +744,9 @@ function calculate(trigger = null) {
 
     let finalTotal = (base - discountAmt) + REG + EXAM;
 
+    if(document.getElementById("amountAfterDiscount")) {
+        document.getElementById("amountAfterDiscount").value = (base - discountAmt).toFixed(2);
+    }
     document.getElementById("finalTotalDisplay").value = finalTotal.toFixed(2);
     document.getElementById("remainingDisplay").value =
         (finalTotal - (parseFloat(paymentInput.value) || 0)).toFixed(2);
@@ -592,13 +760,35 @@ function calculate(trigger = null) {
 document.getElementById("courseSelect").addEventListener("change", function(){
     let selected = this.options[this.selectedIndex];
 
-    originalTotal = parseFloat(selected.getAttribute("data-fee")) || 0;
+    if (selected.value === 'Other') {
+        document.getElementById("customCourseBox").style.display = "block";
+        document.getElementById("durationField").value = "Custom";
+        originalTotal = 0;
+        document.getElementById("originalFeeDisplay").value = 0;
+        document.getElementById("customCourseName").required = true;
+        document.getElementById("customDuration").required = true;
+        document.getElementById("customFees").required = true;
+    } else {
+        document.getElementById("customCourseBox").style.display = "none";
+        document.getElementById("customCourseName").required = false;
+        document.getElementById("customDuration").required = false;
+        document.getElementById("customFees").required = false;
 
-    document.getElementById("durationField").value =
-        selected.getAttribute("data-duration") + " Months";
+        originalTotal = parseFloat(selected.getAttribute("data-fee")) || 0;
 
+        document.getElementById("durationField").value =
+            selected.getAttribute("data-duration") + " Months";
+
+        document.getElementById("originalFeeDisplay").value = originalTotal;
+    }
+    
+    calculate();
+});
+
+/* Custom Fee Input */
+document.getElementById("customFees").addEventListener("input", function(){
+    originalTotal = parseFloat(this.value) || 0;
     document.getElementById("originalFeeDisplay").value = originalTotal;
-
     calculate();
 });
 

@@ -3,7 +3,7 @@ require_once "../includes/auth.php";
 require_once "../includes/header.php";
 require_once "../includes/sidebar.php";
 
-$conn = new mysqli("localhost","root","","cims");
+require_once dirname(__DIR__) . '/includes/db.php';
 
 $month = $_GET['month'] ?? date("n");
 $year  = $_GET['year']  ?? date("Y");
@@ -52,75 +52,6 @@ $data_available = true;
 
 ?>
 
-<style>
-
-.analytics-container{
-max-width:1100px;
-}
-
-.analytics-card{
-background:#fff;
-padding:30px;
-border-radius:14px;
-border:1px solid #E6DCD4;
-margin-bottom:25px;
-}
-
-.analytics-title{
-font-size:22px;
-margin-bottom:20px;
-}
-
-.form-row{
-display:flex;
-gap:20px;
-align-items:center;
-flex-wrap:wrap;
-}
-
-select,input{
-padding:10px;
-border-radius:8px;
-border:1px solid #D8CCC3;
-}
-
-.preview-table{
-width:100%;
-border-collapse:collapse;
-margin-top:20px;
-}
-
-.preview-table th{
-background:#7A1E3A;
-color:#fff;
-padding:10px;
-font-size:14px;
-}
-
-.preview-table td{
-border:1px solid #eee;
-padding:8px;
-font-size:13px;
-}
-
-.export-btn{
-background:#1E5631;
-color:#fff;
-padding:12px 22px;
-border-radius:8px;
-border:none;
-cursor:pointer;
-margin-top:15px;
-}
-
-.no-data{
-padding:20px;
-background:#fff3cd;
-border-radius:8px;
-margin-top:15px;
-}
-
-</style>
 
 <div class="analytics-container">
 
@@ -131,6 +62,7 @@ margin-top:15px;
 </div>
 
 <form method="GET">
+<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
 
 <div class="form-row">
 
@@ -208,6 +140,7 @@ Preview Data
 </table>
 
 <form action="export_process.php" method="POST" id="exportForm">
+<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
 <input type="hidden" name="overwrite" id="overwriteField" value="0">    
 
 <input type="hidden" name="month" value="<?php echo $month; ?>">

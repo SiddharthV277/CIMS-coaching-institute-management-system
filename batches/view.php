@@ -2,7 +2,7 @@
 require_once "../includes/auth.php";
 require_once "../includes/superadmin_only.php";
 
-$conn = new mysqli("localhost", "root", "", "cims");
+require_once dirname(__DIR__) . '/includes/db.php';
 
 if (!isset($_GET['id'])) {
     header("Location: list.php");
@@ -87,40 +87,7 @@ require_once "../includes/header.php";
 require_once "../includes/sidebar.php";
 ?>
 
-<style>
-.section-card{
-    background:#fff;
-    padding:30px;
-    border-radius:16px;
-    border:1px solid #E6DCD4;
-    margin-bottom:25px;
-}
 
-.student-table{
-    width:100%;
-    border-collapse:collapse;
-}
-
-.student-table th,
-.student-table td{
-    padding:10px;
-    border-bottom:1px solid #E6DCD4;
-    font-size:14px;
-}
-
-.student-table th{
-    background:#F9F3F6;
-}
-
-.move-btn{
-    background:#7A1E3A;
-    color:#fff;
-    padding:6px 12px;
-    border:none;
-    border-radius:6px;
-    cursor:pointer;
-}
-</style>
 
 <h2>Batch <?php echo $batch['batch_name']; ?></h2>
 
@@ -162,6 +129,7 @@ require_once "../includes/sidebar.php";
     <td>
 
         <form method="POST" style="display:flex; gap:5px;">
+<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
             <input type="hidden" name="student_id"
                    value="<?php echo $student['id']; ?>">
 

@@ -1,6 +1,6 @@
 <?php
 require_once "../includes/auth.php";
-$conn = new mysqli("localhost", "root", "", "cims");
+require_once dirname(__DIR__) . '/includes/db.php';
 
 $result = $conn->query("
     SELECT *

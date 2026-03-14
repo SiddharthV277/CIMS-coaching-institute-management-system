@@ -1,6 +1,6 @@
 <?php
 
-$conn = new mysqli("localhost","root","","cims");
+require_once dirname(__DIR__) . '/includes/db.php';
 
 $month = intval($_POST['month']);
 $year  = intval($_POST['year']);
@@ -111,7 +111,7 @@ fputcsv($output,[
 "Admission Date",
 "Course Duration",
 
-"Total Fees",
+"Total Fees (incl Reg & Exam)",
 "Discount Type",
 "Discount %",
 "Discount Amount",
@@ -431,64 +431,7 @@ require_once "../includes/header.php";
 require_once "../includes/sidebar.php";
 ?>
 
-<style>
 
-.analytics-card{
-background:#fff;
-padding:30px;
-border-radius:14px;
-border:1px solid #E6DCD4;
-max-width:700px;
-}
-
-.analytics-title{
-font-size:24px;
-margin-bottom:10px;
-}
-
-.analytics-sub{
-color:#555;
-margin-bottom:20px;
-}
-
-.file-list{
-margin:20px 0;
-}
-
-.file-item{
-background:#F7F4F1;
-padding:12px;
-border-radius:8px;
-margin-bottom:10px;
-display:flex;
-justify-content:space-between;
-align-items:center;
-}
-
-.download-btn{
-background:#7A1E3A;
-color:#fff;
-padding:6px 12px;
-border-radius:6px;
-text-decoration:none;
-font-size:14px;
-}
-
-.download-btn:hover{
-background:#5d172c;
-}
-
-.export-btn{
-background:#1E5631;
-color:#fff;
-padding:10px 20px;
-border-radius:8px;
-text-decoration:none;
-display:inline-block;
-margin-top:20px;
-}
-
-</style>
 
 <h2>Analytics Export</h2>
 

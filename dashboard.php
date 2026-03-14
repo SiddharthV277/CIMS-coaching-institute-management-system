@@ -2,49 +2,32 @@
 <?php require_once "includes/sidebar.php"; ?>
 
 <?php
-$conn = new mysqli("localhost", "root", "", "cims");
+require_once __DIR__ . '/includes/db.php';
 
-/* Total Collection */
-$totalCollection = 0;
-$res = $conn->query("SELECT SUM(amount) as total FROM payments");
+/* Collection Stats */
+$res = $conn->query("
+    SELECT 
+        SUM(amount) as total,
+        SUM(CASE WHEN MONTH(payment_date)=MONTH(CURDATE()) AND YEAR(payment_date)=YEAR(CURDATE()) THEN amount ELSE 0 END) as month_total
+    FROM payments
+");
 $row = $res->fetch_assoc();
 $totalCollection = $row['total'] ?? 0;
+$monthCollection = $row['month_total'] ?? 0;
 
-/* This Month Collection */
-$monthCollection = 0;
+/* Installment Stats */
 $res = $conn->query("
-    SELECT SUM(amount) as total 
-    FROM payments 
-    WHERE MONTH(payment_date)=MONTH(CURDATE())
-    AND YEAR(payment_date)=YEAR(CURDATE())
-");
-$row = $res->fetch_assoc();
-$monthCollection = $row['total'] ?? 0;
-
-/* Overdue Installments */
-$overdueCount = 0;
-$res = $conn->query("
-    SELECT COUNT(*) as total
+    SELECT 
+        SUM(CASE WHEN due_date < CURDATE() AND status != 'paid' THEN 1 ELSE 0 END) as overdue,
+        SUM(CASE WHEN status != 'paid' THEN 1 ELSE 0 END) as pending
     FROM fee_installments
-    WHERE due_date < CURDATE()
-    AND status != 'paid'
 ");
 $row = $res->fetch_assoc();
-$overdueCount = $row['total'] ?? 0;
-
-/* Pending Installments */
-$pendingInstallments = 0;
-$res = $conn->query("
-    SELECT COUNT(*) as total
-    FROM fee_installments
-    WHERE status != 'paid'
-");
-$row = $res->fetch_assoc();
-$pendingInstallments = $row['total'] ?? 0;
+$overdueCount = $row['overdue'] ?? 0;
+$pendingInstallments = $row['pending'] ?? 0;
 ?>
 
 <?php
-$conn = new mysqli("localhost", "root", "", "cims");
 
 /* Batch Stats */
 $batchStats = $conn->query("

@@ -1,6 +1,6 @@
 <?php
 require_once "../includes/auth.php";
-$conn = new mysqli("localhost", "root", "", "cims");
+require_once dirname(__DIR__) . '/includes/db.php';
 
 if (!isset($_GET['id'])) {
     header("Location: pending.php");
@@ -29,13 +29,9 @@ $error = "";
 
 /* ================= FETCH COURSE FEE ================= */
 
-$course_fee = 0;
-$stmt_fee = $conn->prepare("SELECT fees FROM courses WHERE course_name=? LIMIT 1");
-$stmt_fee->bind_param("s", $request['course']);
-$stmt_fee->execute();
-$stmt_fee->bind_result($course_fee);
-$stmt_fee->fetch();
-$stmt_fee->close();
+// Directly pull the fee originally logged during the application submission.
+// This is necessary since "Other" custom courses do not exist in the courses table.
+$course_fee = floatval($request['total_fees']);
 
 /* ================= STAFF SHORTLIST ================= */
 
@@ -86,10 +82,11 @@ else{
     $discount_amount = 0;
 }
 
-$final_total = $baseAmount - $discount_amount;
-if($final_total < 0){
-    $final_total = 0;
+$amount_after_discount = $baseAmount - $discount_amount;
+if($amount_after_discount < 0){
+    $amount_after_discount = 0;
 }
+$final_total = $amount_after_discount + $regFee + $examFee;
 /* ================= PAYMENT VALIDATION ================= */
 
 $amount = floatval($_POST['payment_amount']);
@@ -107,9 +104,6 @@ if ($amount > $final_total) {
         $structure = $_POST['payment_structure'];
         $mode = $_POST['payment_mode'];
         $payment_date = date("Y-m-d", strtotime($_POST['payment_date']));
-
-        if ($amount <= 0) $error = "Payment amount must be greater than 0.";
-        if ($amount > $course_fee) $error = "Amount cannot exceed total course fee.";
 
         $receipt_name = $request['receipt_image'];
 
@@ -440,74 +434,7 @@ require_once "../includes/header.php";
 require_once "../includes/sidebar.php";
 ?>
 
-<style>
-.section-card{
-    background:#fff;
-    padding:30px;
-    border-radius:16px;
-    border:1px solid #E6DCD4;
-    margin-bottom:25px;
-}
 
-/* Scope payment form styling properly */
-.section-card form textarea,
-.section-card form input,
-.section-card form select{
-    width:100%;
-    padding:10px;
-    border-radius:8px;
-    border:1px solid #D8CCC3;
-    margin-top:5px;
-}
-
-.section-card form label{
-    font-weight:500;
-    display:block;
-    margin-top:15px;
-    margin-bottom:5px;
-}
-
-.submit-btn{
-    background:#7A1E3A;
-    color:#fff;
-    padding:10px 20px;
-    border:none;
-    border-radius:8px;
-    cursor:pointer;
-    margin-top:15px;
-}
-
-.action-btn{
-    background:#1E5631;
-    color:#fff;
-    padding:10px 20px;
-    border:none;
-    border-radius:8px;
-    cursor:pointer;
-    margin-right:10px;
-}
-
-.reject-btn{
-    background:#8B0000;
-}
-
-.profile-container{
-    display:flex;
-    gap:30px;
-    flex-wrap:wrap;
-}
-
-.profile-photo img{
-    width:180px;
-    border-radius:12px;
-    border:1px solid #ddd;
-}
-
-.profile-details{
-    flex:1;
-    min-width:300px;
-}
-</style>
 <div class="section-card">
 <h3>Admission Status</h3>
 <p><strong><?php echo $request['status']; ?></strong></p>
@@ -674,6 +601,7 @@ require_once "../includes/sidebar.php";
 <?php endif; ?>
 
 <form method="POST" enctype="multipart/form-data">
+<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
 
 <label>Remark</label>
 <textarea name="remark"><?php echo $request['remark']; ?></textarea>
@@ -726,7 +654,14 @@ name="discount_amount"
 id="discountAmount"
 value="<?php echo $request['discount_amount']; ?>">
 
-<label>Final Payable Total</label>
+<label>Amount After Discount</label>
+<input type="number" id="amountAfterDiscount" value="<?php
+$amtAfter = ($course_fee - 550 - 670) - $request['discount_amount'];
+if($amtAfter < 0) $amtAfter = 0;
+echo $amtAfter;
+?>" readonly>
+
+<label>Final Payable Total (+ Reg & Exam Fees)</label>
 <input type="number"
 name="final_total"
 id="finalTotal"
@@ -772,7 +707,7 @@ readonly>
 
 <br><br>
 
-<label>Payment Date *</label>
+<label>Payment Date (DD-MM-YYYY) *</label>
 <input type="date" name="payment_date"
 value="<?php echo date("Y-m-d", strtotime($request['payment_date'])); ?>" required>
 
@@ -842,8 +777,11 @@ document.addEventListener("DOMContentLoaded", function(){
         let newTotal = baseAmount - discount;
         if(newTotal < 0) newTotal = 0;
 
-        finalTotal.value = newTotal.toFixed(2);
-        updateBalance(newTotal);
+        document.getElementById("amountAfterDiscount").value = newTotal.toFixed(2);
+
+        let actualFinalTotal = newTotal + regFee + examFee;
+        finalTotal.value = actualFinalTotal.toFixed(2);
+        updateBalance(actualFinalTotal);
     }
 
     function updateBalance(total){
@@ -859,6 +797,18 @@ document.addEventListener("DOMContentLoaded", function(){
     amountPaid.addEventListener("input", function(){
         updateBalance(parseFloat(finalTotal.value));
     });
+
+    // Initialize values on page load
+    let initialAmount = parseFloat(discountAmount.value) || 0;
+    let initialPercent = parseFloat(discountPercent.value) || 0;
+    
+    if (initialAmount > 0) {
+        updateFromAmount();
+    } else if (initialPercent > 0) {
+        updateFromPercent();
+    } else {
+        updateFinal(0);
+    }
 
 });
 </script>
@@ -886,8 +836,9 @@ View Uploaded Receipt
 
 <form method="POST"
 onsubmit="return confirm('Are you absolutely sure you want to approve this admission? This action cannot be undone.');">
+<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
 
-<label>Admission Date</label>
+<label>Admission Date (DD-MM-YYYY)</label>
 
 <input type="date"
 value="<?php echo $request['admission_date']; ?>"
@@ -904,7 +855,7 @@ readonly>
 <br><br>
 
 <div id="customDateBox" style="display:none;">
-<label>Select New Admission Date</label>
+<label>Select New Admission Date (DD-MM-YYYY)</label>
 <input type="date" name="custom_admission_date">
 </div>
 
@@ -942,6 +893,7 @@ Batch <?= $batch['batch_name']; ?>
 
 <form method="POST"
 onsubmit="return confirm('Are you sure you want to reject this admission?');">
+<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
 <button type="submit" name="reject" class="action-btn reject-btn">Reject</button>
 </form>
 

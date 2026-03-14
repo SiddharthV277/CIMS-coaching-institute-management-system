@@ -1,7 +1,7 @@
 <?php
 require_once "../includes/superadmin_only.php";
 
-$conn = new mysqli("localhost", "root", "", "cims");
+require_once dirname(__DIR__) . '/includes/db.php';
 
 if (isset($_GET['id'])) {
 

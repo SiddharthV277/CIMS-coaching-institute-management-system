@@ -1,7 +1,7 @@
 <?php
 require_once "../includes/superadmin_only.php";
 
-$conn = new mysqli("localhost", "root", "", "cims");
+require_once dirname(__DIR__) . '/includes/db.php';
 
 if (!isset($_GET['id'])) {
     header("Location: list.php");
@@ -58,6 +58,7 @@ require_once "../includes/sidebar.php";
     <?php endif; ?>
 
     <form method="POST">
+<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
 
         <div class="form-group">
             <label>Select Role</label>

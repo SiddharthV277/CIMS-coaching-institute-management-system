@@ -1,7 +1,7 @@
 <?php
 require_once "../includes/auth.php";
 
-$conn = new mysqli("localhost", "root", "", "cims");
+require_once dirname(__DIR__) . '/includes/db.php';
 
 if (!isset($_GET['id'])) {
     header("Location: list.php");
@@ -29,28 +29,6 @@ if (!$student) {
 $error = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $new_batch_id = intval($_POST['batch_id']);
-
-if($new_batch_id != $student['batch_id']){
-
-$stmt = $conn->prepare("SELECT capacity FROM batches WHERE id=?");
-$stmt->bind_param("i",$new_batch_id);
-$stmt->execute();
-$stmt->bind_result($capacity);
-$stmt->fetch();
-$stmt->close();
-
-$stmt = $conn->prepare("SELECT COUNT(*) FROM students WHERE batch_id=?");
-$stmt->bind_param("i",$new_batch_id);
-$stmt->execute();
-$stmt->bind_result($count);
-$stmt->fetch();
-$stmt->close();
-
-if($count >= $capacity){
-$error = "Selected batch is full.";
-}
-}
 
     $photo = $student['photo'];
 
@@ -88,43 +66,21 @@ $heard_about = isset($_POST['heard_about'])
 ? implode(",", $_POST['heard_about'])
 : NULL;
 
-$discount_amount = floatval($_POST['discount_amount']);
-
-$stmt_fee = $conn->prepare("SELECT fees FROM courses WHERE course_name=?");
-$stmt_fee->bind_param("s", $_POST['course']);
-$stmt_fee->execute();
-$stmt_fee->bind_result($original_fee);
-$stmt_fee->fetch();
-$stmt_fee->close();
-
-$regFee = 550;
-$examFee = 670;
-
-$base = $original_fee - $regFee - $examFee;
-if($base < 0) $base = 0;
-
-if($discount_amount > $base){
-$discount_amount = $base;
-}
-
-$new_total = ($base - $discount_amount) + $regFee + $examFee;
-
 $stmt = $conn->prepare("
 UPDATE students SET
 full_name=?, dob=?, gender=?, phone=?, email=?,
 father_name=?, mother_name=?, guardian_phone=?,
 address=?, city=?, state=?, pincode=?,
-course=?, batch_id=?, admission_date=?, course_duration=?,
 medium=?, institution_name=?, institution_address=?,
 degree=?, percentage=?, main_subjects=?, passing_year=?,
-discount_amount=?, total_fees=?, photo=?,
+photo=?,
 heard_about=?, referred_student_name=?,
 referred_student_phone=?, heard_other_text=?
 WHERE id=?
 ");
 
 $stmt->bind_param(
-"ssssssssssssssissssssssssddsssssi",
+"ssssssssssssssssssssssssi",
 $_POST['full_name'],
 $_POST['dob'],
 $_POST['gender'],
@@ -137,10 +93,6 @@ $_POST['address'],
 $_POST['city'],
 $_POST['state'],
 $_POST['pincode'],
-$_POST['course'],
-$new_batch_id,
-$_POST['admission_date'],
-$_POST['course_duration'],
 $_POST['medium'],
 $_POST['institution_name'],
 $_POST['institution_address'],
@@ -148,8 +100,6 @@ $_POST['degree'],
 $_POST['percentage'],
 $_POST['main_subjects'],
 $_POST['passing_year'],
-$discount_amount,
-$new_total,
 $photo,
 $heard_about,
 $_POST['referred_student_name'],
@@ -176,77 +126,7 @@ require_once "../includes/header.php";
 require_once "../includes/sidebar.php";
 ?>
 
-<style>
-.section-card {
-    background: #fff;
-    padding: 35px;
-    border-radius: 18px;
-    border: 1px solid #E6DCD4;
-    box-shadow: 0 25px 50px rgba(60,40,30,0.05);
-    margin-bottom: 35px;
-}
-.section-card h3 {
-    margin-top: 0;
-    margin-bottom: 25px;
-    font-size: 18px;
-    font-weight: 600;
-    border-left: 4px solid #7A1E3A;
-    padding-left: 12px;
-}
-.form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 25px 30px;
-}
-.full-width {
-    grid-column: 1 / -1;
-}
-.form-grid input,
-.form-grid select,
-.form-grid textarea {
-    width: 100%;
-    padding: 12px 14px;
-    border-radius: 10px;
-    border: 1px solid #D8CCC3;
-    font-size: 14px;
-}
-.profile-preview {
-    width: 120px;
-    border-radius: 12px;
-    margin-bottom: 10px;
-}
-.submit-btn {
-    background: linear-gradient(135deg, #7A1E3A, #64182F);
-    color: #fff;
-    padding: 14px 30px;
-    border-radius: 10px;
-    border: none;
-    cursor: pointer;
-}
-.floating-field {
-    position: relative;
-}
 
-.floating-field input {
-    width: 100%;
-    padding: 18px 14px 10px 14px;
-    border-radius: 10px;
-    border: 1px solid #D8CCC3;
-    font-size: 14px;
-    background: #fff;
-}
-
-.floating-field label {
-    position: absolute;
-    top: -8px;
-    left: 12px;
-    background: #fff;
-    padding: 0 6px;
-    font-size: 12px;
-    color: #7A1E3A;
-    font-weight: 500;
-}
-</style>
 
 <h2>Edit Student</h2>
 
@@ -255,12 +135,16 @@ require_once "../includes/sidebar.php";
 <?php endif; ?>
 
 <form method="POST" enctype="multipart/form-data">
+<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
 
 <div class="section-card">
 <h3>Basic Information</h3>
 <div class="form-grid">
 <input type="text" name="full_name" value="<?php echo $student['full_name']; ?>" required>
-<input type="date" name="dob" value="<?php echo $student['dob']; ?>">
+<div>
+    <label style="font-size:12px; color:#666; display:block; margin-bottom:5px;">Date of Birth (DD-MM-YYYY)</label>
+    <input type="date" name="dob" value="<?php echo $student['dob']; ?>">
+</div>
 <select name="gender">
 <option value="Male" <?php if($student['gender']=="Male") echo "selected"; ?>>Male</option>
 <option value="Female" <?php if($student['gender']=="Female") echo "selected"; ?>>Female</option>
@@ -378,7 +262,7 @@ readonly>
 </div>
 
 <div class="floating-field">
-<label>Admission Date</label>
+<label>Admission Date (DD-MM-YYYY)</label>
 <input type="date"
 value="<?php echo $student['admission_date']; ?>"
 readonly>
@@ -392,7 +276,7 @@ readonly>
 </div>
 
 <div class="floating-field">
-<label>Total Fees</label>
+<label>Total Fees (incl. Reg & Exam)</label>
 <input type="number"
 value="<?php echo $student['total_fees']; ?>"
 readonly>
