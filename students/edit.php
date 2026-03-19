@@ -57,6 +57,25 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
     if (empty($error)) {
+        $registration_no = trim($_POST['registration_no'] ?? '');
+        if ($registration_no === '') $registration_no = NULL;
+
+        // Server-side uniqueness check for registration_no (exclude current student)
+        if ($registration_no !== NULL) {
+            $chk = $conn->prepare("SELECT COUNT(*) FROM students WHERE registration_no = ? AND id != ?");
+            $chk->bind_param("si", $registration_no, $id);
+            $chk->execute();
+            $chk->bind_result($dup);
+            $chk->fetch();
+            $chk->close();
+            if ($dup > 0) {
+                $error = "Registration number already exists.";
+            }
+        }
+    }
+
+    if (empty($error)) {
+        $receipt_number = trim($_POST['receipt_number'] ?? '');
 
         $conn->begin_transaction();
 
@@ -75,12 +94,15 @@ medium=?, institution_name=?, institution_address=?,
 degree=?, percentage=?, main_subjects=?, passing_year=?,
 photo=?,
 heard_about=?, referred_student_name=?,
-referred_student_phone=?, heard_other_text=?
+referred_student_phone=?, heard_other_text=?,
+course_duration=?, registration_no=?, receipt_number=?
 WHERE id=?
 ");
 
+$course_duration_with_months = $_POST['course_duration'] . " Months";
+
 $stmt->bind_param(
-"ssssssssssssssssssssssssi",
+"sssssssssssssssssssssssssssi",
 $_POST['full_name'],
 $_POST['dob'],
 $_POST['gender'],
@@ -105,6 +127,9 @@ $heard_about,
 $_POST['referred_student_name'],
 $_POST['referred_student_phone'],
 $_POST['heard_other_text'],
+$course_duration_with_months,
+$registration_no,
+$receipt_number,
 $id
 );
 
@@ -141,6 +166,11 @@ require_once "../includes/sidebar.php";
 <h3>Basic Information</h3>
 <div class="form-grid">
 <input type="text" name="full_name" value="<?php echo $student['full_name']; ?>" required>
+<div>
+    <label style="font-size:12px; color:#666; display:block; margin-bottom:5px;">Registration No</label>
+    <input type="text" name="registration_no" id="registrationNo" value="<?php echo htmlspecialchars($student['registration_no'] ?? ''); ?>" placeholder="Registration No (optional)">
+    <small id="regNoWarning" style="color:red; display:none;">This registration number already exists!</small>
+</div>
 <div>
     <label style="font-size:12px; color:#666; display:block; margin-bottom:5px;">Date of Birth (DD-MM-YYYY)</label>
     <input type="date" name="dob" value="<?php echo $student['dob']; ?>">
@@ -269,10 +299,10 @@ readonly>
 </div>
 
 <div class="floating-field">
-<label>Course Duration</label>
-<input type="text"
-value="<?php echo $student['course_duration']; ?>"
-readonly>
+<label>Course Duration (Months)</label>
+<input type="number"
+name="course_duration"
+value="<?php echo intval($student['course_duration']); ?>">
 </div>
 
 <div class="floating-field">
@@ -289,10 +319,29 @@ value="<?php echo $student['fees_paid']; ?>"
 readonly>
 </div>
 
+<div class="floating-field">
+<label>Receipt Number</label>
+<input type="text"
+name="receipt_number"
+value="<?php echo htmlspecialchars($student['receipt_number'] ?? ''); ?>"
+placeholder="Receipt / Transaction Number">
+</div>
+
 </div>
 </div>
 <button type="submit" class="submit-btn">Update Student</button>
 
 </form>
 
-<?php require_once "../includes/footer.php"; ?> 
+<?php require_once "../includes/footer.php"; ?>
+<script>
+// Registration No duplicate check (exclude current student)
+document.getElementById('registrationNo').addEventListener('blur', function() {
+    const val = this.value.trim();
+    const warn = document.getElementById('regNoWarning');
+    if (!val) { warn.style.display = 'none'; return; }
+    fetch('check_registration.php?reg_no=' + encodeURIComponent(val) + '&exclude_id=<?php echo $id; ?>')
+        .then(r => r.json())
+        .then(data => { warn.style.display = data.exists ? 'block' : 'none'; });
+});
+</script>

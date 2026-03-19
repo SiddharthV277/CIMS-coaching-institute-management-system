@@ -105,37 +105,7 @@ if ($amount > $final_total) {
         $mode = $_POST['payment_mode'];
         $payment_date = date("Y-m-d", strtotime($_POST['payment_date']));
 
-        $receipt_name = $request['receipt_image'];
-
-        if (!empty($_FILES['receipt']['name'])) {
-
-            $ext = strtolower(pathinfo($_FILES['receipt']['name'], PATHINFO_EXTENSION));
-            $allowed = ['jpg','jpeg','png','pdf'];
-
-            if (!in_array($ext, $allowed)) {
-                $error = "Receipt must be JPG, PNG or PDF.";
-            }
-            elseif ($_FILES['receipt']['size'] > 2*1024*1024) {
-                $error = "Receipt must be under 2MB.";
-            }
-            else {
-                if (!empty($receipt_name) &&
-                    file_exists("../uploads/requests_receipts/".$receipt_name)) {
-                    unlink("../uploads/requests_receipts/".$receipt_name);
-                }
-
-                $receipt_name = time()."_receipt.".$ext;
-
-                move_uploaded_file(
-                    $_FILES['receipt']['tmp_name'],
-                    "../uploads/requests_receipts/".$receipt_name
-                );
-            }
-        }
-
-        if (empty($receipt_name)) {
-            $error = "Receipt upload is mandatory.";
-        }
+        $receipt_number = trim($_POST['receipt_number'] ?? '');
 
         if (empty($error)) {
 
@@ -146,7 +116,7 @@ if ($amount > $final_total) {
     payment_structure=?,
     payment_mode=?,
     payment_date=?,
-    receipt_image=?,
+    receipt_number=?,
     discount_type=?,
     discount_percent=?,
     discount_amount=?,
@@ -162,7 +132,7 @@ if ($amount > $final_total) {
                 $structure,
                 $mode,
                 $payment_date,
-                $receipt_name,
+                $receipt_number,
                 $discount_type,
 $discount_percent,
 $discount_amount,
@@ -188,6 +158,21 @@ if (isset($_POST['approve']) && $_SESSION['role'] === 'superadmin') {
 
         try {
             $batch_id = intval($_POST['batch_id']);
+            $registration_no = trim($_POST['registration_no'] ?? '');
+            if ($registration_no === '') $registration_no = NULL;
+
+            // Server-side uniqueness check for registration_no
+            if ($registration_no !== NULL) {
+                $chk = $conn->prepare("SELECT COUNT(*) FROM students WHERE registration_no = ?");
+                $chk->bind_param("s", $registration_no);
+                $chk->execute();
+                $chk->bind_result($dup);
+                $chk->fetch();
+                $chk->close();
+                if ($dup > 0) {
+                    throw new Exception("Registration number already exists.");
+                }
+            }
 
 /* Get capacity */
 $stmt = $conn->prepare("SELECT capacity FROM batches WHERE id=?");
@@ -241,27 +226,14 @@ $admission_no = "VIG".$year."-".str_pad($sequence, 3, "0", STR_PAD_LEFT);
                     "../uploads/students/".$request['photo']
                 );
             }
-            /* Fetch course duration */
-
-$course_duration = "";
-
-$stmt = $conn->prepare("
-SELECT duration_months
-FROM courses
-WHERE course_name = ?
-LIMIT 1
-");
-
-$stmt->bind_param("s", $request['course']);
-$stmt->execute();
-$stmt->bind_result($course_duration);
-$stmt->fetch();
-$stmt->close();
+            /* Fetch course duration directly from request */
+            $course_duration = $request['course_duration'] ?? "";
+            
             $fees_paid = $request['payment_amount'];
             $status_student = "Active";
             /* Fetch latest payment data from admission_requests */
 $stmt_latest = $conn->prepare("
-SELECT payment_amount, payment_structure, payment_mode, payment_date, receipt_image, reviewed_by
+SELECT payment_amount, payment_structure, payment_mode, payment_date, receipt_number, reviewed_by
 FROM admission_requests
 WHERE id = ?
 ");
@@ -287,6 +259,7 @@ if(empty($final_admission_date) || $final_admission_date == '0000-00-00'){
 $stmt = $conn->prepare("
 INSERT INTO students (
     admission_no,
+    registration_no,
     full_name,
     dob,
     gender,
@@ -324,14 +297,16 @@ INSERT INTO students (
     referred_student_name,
     referred_student_phone,
     heard_other_text,
-    batch_id
+    batch_id,
+    receipt_number
 )
-VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 ");
 
 $stmt->bind_param(
-"ssssssssssssssssssddsissssssssdddsssssi",
+"sssssssssssssssssssddsissssssssdddsssssis",
 $admission_no,
+$registration_no,
 $request['full_name'],
 $request['dob'],
 $request['gender'],
@@ -369,24 +344,19 @@ $request['heard_about'],
 $request['referred_student_name'],
 $request['referred_student_phone'],
 $request['heard_other_text'],
-$batch_id
+$batch_id,
+$latest['receipt_number']
 );
             $stmt->execute();
             $student_id = $stmt->insert_id;
 
-            if (!empty($request['receipt_image']) &&
-                file_exists("../uploads/requests_receipts/".$request['receipt_image'])) {
-                rename(
-                    "../uploads/requests_receipts/".$request['receipt_image'],
-                    "../uploads/receipts/".$request['receipt_image']
-                );
-            }
+
 
             $stmt = $conn->prepare("
                 INSERT INTO payments (
                     student_id, amount, payment_structure,
                     payment_mode, payment_date,
-                    receipt_image, received_by
+                    receipt_number, received_by
                 )
                 VALUES (?,?,?,?,?,?,?)
             ");
@@ -398,7 +368,7 @@ $latest['payment_amount'],
 $latest['payment_structure'],
 $latest['payment_mode'],
 date("Y-m-d", strtotime($latest['payment_date'])),
-$latest['receipt_image'],
+$latest['receipt_number'],
 $latest['reviewed_by']
 );
             $stmt->execute();
@@ -713,17 +683,8 @@ value="<?php echo date("Y-m-d", strtotime($request['payment_date'])); ?>" requir
 
 <br><br>
 
-<label>Upload Receipt *</label>
-<input type="file" name="receipt" accept=".jpg,.jpeg,.png,.pdf">
-
-<?php if(!empty($request['receipt_image'])): ?>
-<p>
-Current Receipt:
-<a href="/cims/uploads/requests_receipts/<?php echo $request['receipt_image']; ?>" target="_blank">
-View Receipt
-</a>
-</p>
-<?php endif; ?>
+<label>Receipt Number</label>
+<input type="text" name="receipt_number" value="<?php echo htmlspecialchars($request['receipt_number'] ?? ''); ?>" placeholder="Receipt / Transaction Number">
 
 <br><br>
 
@@ -859,6 +820,14 @@ readonly>
 <input type="date" name="custom_admission_date">
 </div>
 
+<div>
+    <label>Registration No</label>
+    <input type="text" name="registration_no" id="registrationNo" placeholder="Registration No (optional)">
+    <small id="regNoWarning" style="color:red; display:none;">This registration number already exists!</small>
+</div>
+
+<br><br>
+
 <label>Assign Final Batch *</label>
 
 <select name="batch_id" required>
@@ -914,6 +883,20 @@ document.addEventListener("DOMContentLoaded", function(){
 });
 </script>
 
+<?php endif; ?>
+
+<?php if($_SESSION['role']==='superadmin' && $request['status']==='Shortlisted'): ?>
+<script>
+// Registration No duplicate check
+document.getElementById('registrationNo').addEventListener('blur', function() {
+    const val = this.value.trim();
+    const warn = document.getElementById('regNoWarning');
+    if (!val) { warn.style.display = 'none'; return; }
+    fetch('check_registration.php?reg_no=' + encodeURIComponent(val))
+        .then(r => r.json())
+        .then(data => { warn.style.display = data.exists ? 'block' : 'none'; });
+});
+</script>
 <?php endif; ?>
 
 <?php require_once "../includes/footer.php"; ?>

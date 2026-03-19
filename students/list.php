@@ -5,7 +5,7 @@ require_once dirname(__DIR__) . '/includes/db.php';
 
 /* Fetch students */
 $result = $conn->query("
-    SELECT id, admission_no, full_name, course, batch, phone,
+    SELECT id, admission_no, registration_no, full_name, course, batch, phone,
            total_fees, fees_paid, final_total, status,
            admission_date, course_duration
     FROM students
@@ -56,6 +56,7 @@ require_once "../includes/sidebar.php";
         <thead>
             <tr>
                 <th>Admission No</th>
+                <th>Reg. No</th>
                 <th>Name</th>
                 <th>Course</th>
                 <th>Batch</th>
@@ -85,6 +86,8 @@ require_once "../includes/sidebar.php";
             <tr>
 
                 <td><strong><?php echo $row['admission_no']; ?></strong></td>
+
+                <td><?php echo htmlspecialchars($row['registration_no'] ?? ''); ?></td>
 
                 <td><?php echo htmlspecialchars($row['full_name']); ?></td>
 

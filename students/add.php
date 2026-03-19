@@ -96,32 +96,30 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
     }
 
-    /* ================= RECEIPT ================= */
+    /* ================= RECEIPT NUMBER ================= */
 
-    $receipt_name = NULL;
+    $receipt_number = trim($_POST['receipt_number'] ?? '');
 
-    if (empty($_FILES['receipt']['name'])) {
-        $error = "Receipt upload is mandatory.";
-    } else {
+    if (empty($error)) {
+        $batch_id = intval($_POST['batch_id']);
+        $registration_no = trim($_POST['registration_no'] ?? '');
+        if ($registration_no === '') $registration_no = NULL;
 
-        $ext = strtolower(pathinfo($_FILES['receipt']['name'], PATHINFO_EXTENSION));
-        $allowed = ['jpg','jpeg','png','pdf'];
-
-        if (!in_array($ext, $allowed)) {
-            $error = "Receipt must be JPG, PNG or PDF.";
-        }
-        elseif ($_FILES['receipt']['size'] > 2*1024*1024) {
-            $error = "Receipt must be under 2MB.";
-        }
-        else {
-            $receipt_name = $admission_no."_receipt.".$ext;
-            move_uploaded_file($_FILES['receipt']['tmp_name'],"../uploads/receipts/".$receipt_name);
+        // Server-side uniqueness check for registration_no
+        if ($registration_no !== NULL) {
+            $chk = $conn->prepare("SELECT COUNT(*) FROM students WHERE registration_no = ?");
+            $chk->bind_param("s", $registration_no);
+            $chk->execute();
+            $chk->bind_result($dup);
+            $chk->fetch();
+            $chk->close();
+            if ($dup > 0) {
+                $error = "Registration number already exists.";
+            }
         }
     }
 
     if (empty($error)) {
-        $batch_id = intval($_POST['batch_id']);
-
 
 
         $conn->begin_transaction();
@@ -152,6 +150,7 @@ if ($current_count >= $capacity) {
 $stmt = $conn->prepare("
 INSERT INTO students (
 admission_no,
+registration_no,
 full_name,
 dob,
 gender,
@@ -189,9 +188,10 @@ heard_about,
 referred_student_name,
 referred_student_phone,
 heard_other_text,
-batch_id
+batch_id,
+receipt_number
 )
-VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 ");
 
             $heard_about = isset($_POST['heard_about']) ? implode(",", $_POST['heard_about']) : "";
@@ -215,8 +215,9 @@ $duration = $_POST['course'] === 'Other' ? $_POST['custom_course_duration'] . " 
 $fee = $_POST['course'] === 'Other' ? $_POST['custom_total_fees'] : $total_fees;
 
 $stmt->bind_param(
-"ssssssssssssssssssddsissssssssdddsssssi",
+"sssssssssssssssssssddsissssssssdddsssssis",
 $admission_no,
+$registration_no,
 $_POST['full_name'],
 $_POST['dob'],
 $_POST['gender'],
@@ -254,7 +255,8 @@ $heard_about,
 $_POST['referred_student_name'],
 $_POST['referred_student_phone'],
 $_POST['heard_other_text'],
-$batch_id                    
+$batch_id,
+$receipt_number
 );
             $stmt->execute();
             $student_id = $stmt->insert_id;
@@ -263,7 +265,7 @@ $batch_id
                 INSERT INTO payments (
                     student_id, amount, payment_structure,
                     payment_mode, payment_date,
-                    receipt_image, received_by
+                    receipt_number, received_by
                 )
                 VALUES (?,?,?,?,?,?,?)
             ");
@@ -275,7 +277,7 @@ $batch_id
                 $_POST['payment_structure'],
                 $_POST['payment_mode'],
                 $_POST['payment_date'],
-                $receipt_name,
+                $receipt_number,
                 $_SESSION['admin_id']
             );
 
@@ -310,6 +312,11 @@ require_once "../includes/sidebar.php";
 <h3>Basic Information</h3>
 <div class="form-grid">
 
+<div>
+    <label style="font-size:12px; color:#666; display:block; margin-bottom:5px;">Registration No</label>
+    <input type="text" name="registration_no" id="registrationNo" placeholder="Registration No (optional)">
+    <small id="regNoWarning" style="color:red; display:none;">This registration number already exists!</small>
+</div>
 <input type="text" name="full_name" placeholder="Full Name" required>
 <div>
     <label style="font-size:12px; color:#666; display:block; margin-bottom:5px;">Date of Birth (DD-MM-YYYY)</label>
@@ -604,8 +611,8 @@ Batch <?= $batch['batch_name']; ?>
         </div>
 
         <div class="full-width">
-            <label>Upload Receipt (Max 2MB)</label>
-            <input type="file" name="receipt" accept=".jpg,.jpeg,.png,.pdf" required>
+            <label>Receipt Number</label>
+            <input type="text" name="receipt_number" placeholder="Receipt / Transaction Number">
         </div>
 
     </div>
@@ -826,6 +833,17 @@ function handleReferralToggle() {
 
 checkboxes.forEach(cb => {
     cb.addEventListener("change", handleReferralToggle);
+});
+</script>
+<script>
+// Registration No duplicate check
+document.getElementById('registrationNo').addEventListener('blur', function() {
+    const val = this.value.trim();
+    const warn = document.getElementById('regNoWarning');
+    if (!val) { warn.style.display = 'none'; return; }
+    fetch('check_registration.php?reg_no=' + encodeURIComponent(val))
+        .then(r => r.json())
+        .then(data => { warn.style.display = data.exists ? 'block' : 'none'; });
 });
 </script>
 

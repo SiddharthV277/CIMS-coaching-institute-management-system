@@ -230,6 +230,9 @@ $due = $final_total - $total_paid;
             <p>Student Profile & Admission Record</p>
             <p style="margin-top:10px;">
                 <strong>Admission No:</strong> <?php echo htmlspecialchars($student['admission_no']); ?><br>
+                <?php if (!empty($student['registration_no'])): ?>
+                <strong>Registration No:</strong> <?php echo htmlspecialchars($student['registration_no']); ?><br>
+                <?php endif; ?>
                 <strong>Date (DD-MM-YYYY):</strong> <?php echo date('d-m-Y', strtotime($student['admission_date'])); ?>
             </p>
         </div>

@@ -81,6 +81,12 @@ require_once "../includes/sidebar.php";
     <h2><?php echo htmlspecialchars($student['full_name']); ?></h2>
     <div class="profile-meta">
         Admission No: <strong><?php echo $student['admission_no']; ?></strong><br>
+        <?php if (!empty($student['registration_no'])): ?>
+        Registration No: <strong><?php echo htmlspecialchars($student['registration_no']); ?></strong><br>
+        <?php endif; ?>
+        <?php if (!empty($student['receipt_number'])): ?>
+        Receipt No: <strong><?php echo htmlspecialchars($student['receipt_number']); ?></strong><br>
+        <?php endif; ?>
         Course: <?php echo $student['course']; ?><br>
         Batch:
 <?php 
