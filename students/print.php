@@ -334,6 +334,7 @@ $due = $final_total - $total_paid;
 
     <?php if(count($payments) > 0): ?>
     <h3>Payment Transactions</h3>
+    <div style="overflow-x: auto;">
     <table>
         <thead>
             <tr>
@@ -354,6 +355,7 @@ $due = $final_total - $total_paid;
             <?php endforeach; ?>
         </tbody>
     </table>
+    </div>
     <?php endif; ?>
 
     <div class="footer-note">

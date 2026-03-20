@@ -9,7 +9,7 @@ require_once __DIR__ . "/auth.php";
     <title>Vigyaan Admin Panel</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <link rel="stylesheet" href="/cims/assets/css/style.css">
+    <link rel="stylesheet" href="/cims/assets/css/style.css?v=<?php echo time(); ?>">
 </head>
 
 <body>
@@ -17,6 +17,9 @@ require_once __DIR__ . "/auth.php";
 <div class="topbar">
 
 <div class="topbar-left">
+<button id="mobileMenuBtn" class="hamburger-btn">
+    <span></span><span></span><span></span>
+</button>
 <span class="welcome-text">
 Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?>
 </span>

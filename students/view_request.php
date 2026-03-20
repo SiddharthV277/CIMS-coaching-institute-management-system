@@ -350,7 +350,28 @@ $latest['receipt_number']
             $stmt->execute();
             $student_id = $stmt->insert_id;
 
+            /* ================= REFERRAL LOGIC ================= */
+            if (!empty($request['referred_student_name'])) {
+                $claimed_name = trim($request['referred_student_name']);
+                $claimed_phone = trim($request['referred_student_phone'] ?? '');
+                
+                $chk_ref = $conn->prepare("SELECT id FROM referral_accounts WHERE referrer_name = ? AND (referrer_phone = ? OR ? = '')");
+                $chk_ref->bind_param("sss", $claimed_name, $claimed_phone, $claimed_phone);
+                $chk_ref->execute();
+                $ref_res = $chk_ref->get_result();
 
+                if ($ref_res->num_rows > 0) {
+                    $referrer_id = $ref_res->fetch_assoc()['id'];
+                    $stmt_r = $conn->prepare("INSERT INTO referred_students (referral_account_id, referred_student_name, referred_student_phone, admitted_student_id, added_by_admin) VALUES (?, ?, ?, ?, 'System Auto-Match')");
+                    $stmt_r->bind_param("issi", $referrer_id, $request['full_name'], $request['phone'], $student_id);
+                    $stmt_r->execute();
+
+                    $stmt_u = $conn->prepare("UPDATE referral_accounts SET total_points = total_points + 1, remaining_points = remaining_points + 1 WHERE id = ?");
+                    $stmt_u->bind_param("i", $referrer_id);
+                    $stmt_u->execute();
+                }
+            }
+            /* ================================================== */
 
             $stmt = $conn->prepare("
                 INSERT INTO payments (

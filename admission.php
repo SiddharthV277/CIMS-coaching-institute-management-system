@@ -202,6 +202,7 @@ background:#fff;
 padding:50px;
 border-radius:24px;
 box-shadow:0 40px 80px rgba(0,0,0,0.25);
+box-sizing: border-box;
 }
 
 .logo{text-align:center;margin-bottom:15px;}
@@ -265,6 +266,7 @@ color:#721C24;
 
 @media(max-width:768px){
 .form-grid{grid-template-columns:1fr;}
+.wrapper{padding:25px;}
 }
 .floating-group {
     position: relative;

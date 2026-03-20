@@ -56,8 +56,16 @@ if ($conn->connect_error === false) {
             <span class="nav-badge"><?php echo $pending_count; ?></span>
         <?php endif; ?>
     </a>
+    
     <a href="/cims/fees/list.php" class="nav-link">
         Fees Management
+    </a>
+    <a href="/cims/tasks/index.php" class="nav-link">
+        Tasks
+    </a>
+    
+    <a href="/cims/referrals/index.php" class="nav-link">
+        Referred Students
     </a>
 
 </div>

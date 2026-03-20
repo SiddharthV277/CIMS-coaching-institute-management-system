@@ -274,6 +274,7 @@ echo !empty($student['batch_name'])
 <div class="section-card">
 <h3>Payment History</h3>
 
+<div class="table-responsive">
 <table class="payment-table">
 <tr>
     <th>Amount</th>
@@ -300,6 +301,7 @@ echo !empty($student['batch_name'])
 <?php endforeach; ?>
 
 </table>
+</div>
 </div>
 <?php endif; ?>
 

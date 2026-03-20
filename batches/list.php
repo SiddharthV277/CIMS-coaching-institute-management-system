@@ -22,6 +22,7 @@ require_once "../includes/sidebar.php";
     <h2>Batch Management</h2>
 </div>
 
+<div class="table-responsive">
 <table class="batch-table">
     <tr>
         <th>Batch</th>
@@ -79,5 +80,6 @@ require_once "../includes/sidebar.php";
 <?php endwhile; ?>
 
 </table>
+</div>
 
 <?php require_once "../includes/footer.php"; ?>

@@ -93,7 +93,7 @@ require_once "../includes/sidebar.php";
 
 <div class="section-card">
 <strong>Time Slot:</strong> <?php echo $batch['time_slot']; ?><br>
-<strong>Strength:</strong> <?php echo $strength; ?> / <?php echo $batch['capacity']; ?><br>
+<strong>Strength:</strong> <?php echo (int)$strength; ?> / <?php echo $batch['capacity']; ?><br>
 <strong>Status:</strong> <?php echo $batch['status']; ?>
 </div>
 
@@ -111,6 +111,7 @@ require_once "../includes/sidebar.php";
 <p>No students assigned yet.</p>
 <?php else: ?>
 
+<div class="table-responsive">
 <table class="student-table">
 <tr>
     <th>Admission No</th>
@@ -156,6 +157,7 @@ require_once "../includes/sidebar.php";
 <?php endwhile; ?>
 
 </table>
+</div>
 
 <?php endif; ?>
 

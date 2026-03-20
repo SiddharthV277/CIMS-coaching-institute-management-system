@@ -22,6 +22,7 @@ require_once "../includes/sidebar.php";
 
         <div class="card-body">
 
+            <div class="table-responsive">
             <table class="data-table">
 
                 <thead>
@@ -72,6 +73,7 @@ require_once "../includes/sidebar.php";
                 </tbody>
 
             </table>
+            </div>
 
         </div>
 

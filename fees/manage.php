@@ -203,6 +203,7 @@ Generate / Regenerate Plan
 
 <?php if ($installments->num_rows > 0): ?>
 <div class="card">
+<div class="table-responsive">
 <table class="table">
 <tr>
 <th>#</th>
@@ -238,6 +239,7 @@ if ($row['status'] == 'paid') {
 </tr>
 <?php endwhile; ?>
 </table>
+</div>
 </div>
 <?php endif; ?>
 

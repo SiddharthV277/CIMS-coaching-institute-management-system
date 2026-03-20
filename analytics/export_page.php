@@ -103,6 +103,7 @@ Preview Data
 
 <?php if($data_available): ?>
 
+<div class="table-responsive">
 <table class="preview-table">
 
 <tr>
@@ -138,6 +139,7 @@ Preview Data
 <?php endforeach; ?>
 
 </table>
+</div>
 
 <form action="export_process.php" method="POST" id="exportForm">
 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">

@@ -35,7 +35,7 @@ require_once "../includes/sidebar.php";
 
 <h2>Fee Management</h2>
 
-<div class="table-wrapper">
+<div class="table-responsive">
 
 <table class="fee-table">
 <tr>

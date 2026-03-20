@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 19, 2026 at 02:50 AM
+-- Generation Time: Mar 20, 2026 at 04:49 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -42,7 +42,8 @@ CREATE TABLE `admins` (
 
 INSERT INTO `admins` (`id`, `username`, `password`, `role`, `status`, `created_at`) VALUES
 (1, 'SidV', '$2y$10$bh6rwHxZR.bJEzdYXgkRdOlP8GAOisHKHXo3bWO/Ioi6y.4jhTdaC', 'superadmin', 'active', '2026-02-20 02:51:52'),
-(2, 'staff1', '$2y$10$KlIQ1y2/NzbIyD1IP10wzeH2ks7Jq3a3BVl9kOC13IWokn02OKyPO', 'staff', 'active', '2026-02-20 03:02:11');
+(2, 'staff1', '$2y$10$KlIQ1y2/NzbIyD1IP10wzeH2ks7Jq3a3BVl9kOC13IWokn02OKyPO', 'staff', 'active', '2026-02-20 03:02:11'),
+(8, 'Vigyaan.RS', '$2y$10$S9RgFpVBeKC4GyQgF3wlQ.KRgBsTCYezy7XW1HV26Rpnt3LdJKA/O', 'superadmin', 'active', '2026-03-20 02:45:03');
 
 -- --------------------------------------------------------
 
@@ -295,7 +296,10 @@ INSERT INTO `payments` (`id`, `student_id`, `amount`, `payment_structure`, `paym
 (40, 48, 1000.00, 'Monthly', 'Cash', '2026-03-13', 1, '2026-03-14 02:58:51', NULL),
 (41, 49, 700.00, 'Full', 'Cash', '2026-03-16', 1, '2026-03-16 04:49:01', NULL),
 (42, 50, 700.00, 'Monthly', 'Online', '2026-03-16', 1, '2026-03-16 04:56:16', NULL),
-(43, 51, 1000.00, 'Monthly', 'Cash', '2026-03-17', 1, '2026-03-17 05:33:42', NULL);
+(43, 51, 1000.00, 'Monthly', 'Cash', '2026-03-17', 1, '2026-03-17 05:33:42', NULL),
+(44, 52, 6000.00, 'Full', 'Online', '2026-03-18', 8, '2026-03-19 02:36:01', '1689'),
+(45, 53, 5200.00, 'Full', 'Cash', '2026-03-19', 8, '2026-03-20 02:55:22', '1691'),
+(46, 54, 5200.00, 'Full', 'Cash', '2026-03-19', 8, '2026-03-20 02:59:39', '1692');
 
 -- --------------------------------------------------------
 
@@ -358,7 +362,10 @@ INSERT INTO `students` (`id`, `admission_no`, `registration_no`, `full_name`, `d
 (48, 'VIG2026-001', '1119', 'Sakshi Kachhap', '2009-07-02', 'Female', '9709054297', 'sakshikachhap5429@gmali.com', '1773456746_1981.png', 'Nirmal Kachhap', 'Binita Kacchap', '9334946237', 'shirkha Toli Khijri', 'Ranchi', 'Jharkhand', '834010', 'Basics of Computer', 'C', '2026-03-13', '3 Months', 4500.00, 1000.00, 'Active', '2026-03-14 02:58:51', '2026-03-19 01:47:53', 1, 'CBSE', 'Jawahar Navodaya Vidyalaya', 'BIT Mesra Rd, Mesra', 'Class 10', '80', 'Maths', '2026', '', 0.00, 0.00, 4500.00, 'Monthly', 'Others', '', '', 'From Known', 3, '1682'),
 (49, 'VIG2026-002', '1120', 'Anshul Lakra', '1989-11-11', 'Male', '9304651342', 'anshulbolt02@gmail.com', 'VIG2026-002.jpg', 'Biokal Lakra', 'Lila Lakra', '9304651342', 'Khijri, Namkum', 'Ranchi', 'Jharkhand', '834010', 'Typing Course', 'C', '2026-03-16', '3 Months', 2250.00, 700.00, 'Active', '2026-03-16 04:49:01', '2026-03-19 01:48:28', 2, 'Post Graduate', 'Jain College', 'Dhurva', 'Nagpuri Litrature', '00', 'Nagpuri Litrature', '2021', 'Amount', 14.56, 150.00, 2100.00, 'Full', NULL, '', '', '', 3, '1683'),
 (50, 'VIG2026-003', '1121', 'Manish Indwar ', '1992-11-13', 'Male', '8797208869', 'manishindwar@rediffmail.com', '1773636092_6433.jpg', 'Somra Indwar', 'Kunti Indwar', '8797208869', 'SirkhaToli, Namkum', 'Ranchi', 'Jharkhand', '834010', 'Typing Practice', 'C', '2026-03-16', '3 Months', 2250.00, 700.00, 'Active', '2026-03-16 04:56:16', '2026-03-19 01:48:55', 3, 'Post Graduate', 'IGNOU', 'Ashok Nagar', 'M.COM', '00', 'Commerce', '2022', 'General', 14.56, 150.00, 2100.00, 'Monthly', NULL, '', '', '', 3, '1684'),
-(51, 'VIG2026-004', '1125', 'Anish Lohra', '2009-01-01', 'Male', '9801136651', 'anishiohra650@gamil.com', '1773724898_2565.jpg', 'Charo Lohra', 'Sarita Devi', '9801136651', 'Charna Beda, Namkum, Tetri', 'Ranchi', 'Jharkhand', '834010', 'Advanced Diploma in Computer Application', 'D', '2026-03-17', '6 Months', 8500.00, 1000.00, 'Active', '2026-03-17 05:33:42', '2026-03-19 01:49:55', 4, 'JAC', 'Project High School', 'Bargawa, Namkum', '10', '00', 'NILL', '2026', 'General', 27.47, 2000.00, 6500.00, 'Monthly', 'Student', 'Lakhiya Tirki', '9572101031', '', 4, '1688');
+(51, 'VIG2026-004', '1125', 'Anish Lohra', '2009-01-01', 'Male', '9801136651', 'anishiohra650@gamil.com', '1773724898_2565.jpg', 'Charo Lohra', 'Sarita Devi', '9801136651', 'Charna Beda, Namkum, Tetri', 'Ranchi', 'Jharkhand', '834010', 'Advanced Diploma in Computer Application', 'D', '2026-03-17', '6 Months', 8500.00, 1000.00, 'Active', '2026-03-17 05:33:42', '2026-03-19 01:49:55', 4, 'JAC', 'Project High School', 'Bargawa, Namkum', '10', '00', 'NILL', '2026', 'General', 27.47, 2000.00, 6500.00, 'Monthly', 'Student', 'Lakhiya Tirki', '9572101031', '', 4, '1688'),
+(52, 'VIG2026-005', '1126', 'Riya Mahto', '2007-02-23', 'Female', '9835632787', 'mahtoriya2787@gmail.com', 'VIG2026-005.jpg', 'Ajit Mahto', 'Manju Devi', '9631086642', 'Press Colony, Sidrol', 'Ranchi', 'Jharkhand', '834010', 'Advanced Diploma in Computer Application', 'A', '2026-03-18', '12 Months', 6000.00, 6000.00, 'Active', '2026-03-19 02:36:01', '2026-03-19 02:36:01', 5, 'JAC', 'St. Annes Intermediate', 'Dr. Kamil Bulke Path', '12', '90.4', 'ARTS', '2023', 'Amount', 34.34, 2500.00, 6000.00, 'Full', 'Student', 'Rubita Mahto', '6206753908', '', 1, '1689'),
+(53, 'VIG2026-006', '1128', 'Priyam Kumari', '2005-02-06', 'Male', '6206619909', 'kumaripriyam534@GMAIL.COM', 'VIG2026-006.jpg', 'Megnath Prashad', 'Ramita Devi', '7061946891', 'Amethiya Nagar, near Krishna Dairy', 'Ranchi', 'Jharkhand', '834010', 'Advanced Diploma in Computer Application', 'A', '2026-03-20', '12 Months', 5200.00, 5200.00, 'Active', '2026-03-20 02:55:22', '2026-03-20 02:55:22', 6, 'Under Graduate', 'Marwari College', 'Main Road', 'Accounts Honours', '00', 'Accounts Honours', '2026', 'Amount', 45.33, 3300.00, 5200.00, 'Full', '', '', '', '', 1, '1691'),
+(54, 'VIG2026-007', '1129', 'Pratigya Kumari', '2007-05-20', 'Female', '6206619909', 'kpratigya80@gmail.com', 'VIG2026-007.jpg', 'Megnath Prashad', 'Ramita Devi', '7061946891', 'Amethiya Nagar, Near Krishna dairy', 'Ranchi', 'Jharkhand', '834010', 'Advanced Diploma in Computer Application', 'A', '2026-03-19', '12 Months', 5200.00, 5200.00, 'Active', '2026-03-20 02:59:39', '2026-03-20 02:59:39', 7, 'JAC', 'Ursline Inter college', 'Ranchi', '12', '00', 'Commerce', '2026', 'Amount', 45.33, 3300.00, 5200.00, 'Full', '', '', '', '', 1, '1692');
 
 --
 -- Indexes for dumped tables
@@ -433,7 +440,7 @@ ALTER TABLE `students`
 -- AUTO_INCREMENT for table `admins`
 --
 ALTER TABLE `admins`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `admission_requests`
@@ -475,13 +482,13 @@ ALTER TABLE `passed_out_students`
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
 
 --
 -- AUTO_INCREMENT for table `students`
 --
 ALTER TABLE `students`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=52;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=55;
 
 --
 -- Constraints for dumped tables

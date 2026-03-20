@@ -72,12 +72,17 @@ body {
 
 .login-container {
     background: #FFFFFF;
-    width: 400px;
+    width: 100%;
+    max-width: 400px;
+    box-sizing: border-box;
     padding: 45px 40px;
     border-radius: 14px;
     box-shadow: 0 20px 45px rgba(60,40,30,0.08);
     text-align: center;
     border: 1px solid #E6DCD4;
+}
+@media(max-width: 480px) {
+    .login-container { padding: 30px 20px; }
 }
 
 .logo-image {

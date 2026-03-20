@@ -36,6 +36,13 @@ $total_students = $studentStats['total_students'] ?? 0;
 $occupancy = ($total_capacity > 0)
     ? round(($total_students / $total_capacity) * 100)
     : 0;
+
+/* Active Tasks for Current User */
+$admin_id = $_SESSION['admin_id'];
+$tasks_stmt = $conn->prepare("SELECT t.id, t.heading, t.created_at, a.username as assigner_name FROM tasks t LEFT JOIN admins a ON t.assigned_by = a.id WHERE t.assigned_to = ? AND t.status = 'pending' ORDER BY t.created_at DESC");
+$tasks_stmt->bind_param("i", $admin_id);
+$tasks_stmt->execute();
+$active_tasks = $tasks_stmt->get_result();
 ?>
 
 <style>
@@ -252,6 +259,25 @@ $occupancy = ($total_capacity > 0)
     </div>
 </div>
 
+<?php if ($active_tasks->num_rows > 0): ?>
+<!-- Active Tasks -->
+<div class="dash-section-label" style="color:#c0392b;">Action Required: Your Pending Tasks</div>
+<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; margin-bottom:36px;">
+    <?php while($t = $active_tasks->fetch_assoc()): ?>
+    <div style="background:#fff; border-left:4px solid #e74c3c; border-radius:8px; padding:15px; box-shadow:0 2px 4px rgba(0,0,0,0.05); display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+            <h4 style="margin:0 0 5px 0; color:#2c3e50; font-size:15px; font-weight:bold;"><?php echo htmlspecialchars($t['heading']); ?></h4>
+            <div style="font-size:12px; color:#7f8c8d;">
+                Assigned by <strong><?php echo htmlspecialchars($t['assigner_name']); ?></strong><br>
+                <?php echo date("M d, Y", strtotime($t['created_at'])); ?>
+            </div>
+        </div>
+        <a href="tasks/view.php?id=<?php echo $admin_id; ?>" style="background:#e74c3c; color:white; padding:6px 12px; border-radius:4px; font-size:11px; font-weight:bold; text-decoration:none; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(231,76,60,0.3);">View Board</a>
+    </div>
+    <?php endwhile; ?>
+</div>
+<?php endif; ?>
+
 <!-- System Info -->
 <div class="dash-section-label">System</div>
 <div class="dash-stats-grid" style="margin-bottom:36px;">
@@ -335,6 +361,27 @@ $occupancy = ($total_capacity > 0)
         <div class="module-icon-wrap">🧑‍💼</div>
         <h4>Staff Management</h4>
         <p>Manage institute staff accounts and permissions.</p>
+        <div class="module-link-row">Open Module <span class="module-arrow">→</span></div>
+    </a>
+    
+    <a href="students/pending.php" class="dash-module-card">
+        <div class="module-icon-wrap">🔔</div>
+        <h4>Admission Requests</h4>
+        <p>Review and approve pending student admissions.</p>
+        <div class="module-link-row">Open Module <span class="module-arrow">→</span></div>
+    </a>
+
+    <a href="tasks/index.php" class="dash-module-card">
+        <div class="module-icon-wrap">✅</div>
+        <h4>Tasks</h4>
+        <p>Assign and track staff responsibilities and workflow.</p>
+        <div class="module-link-row">Open Module <span class="module-arrow">→</span></div>
+    </a>
+
+    <a href="referrals/index.php" class="dash-module-card">
+        <div class="module-icon-wrap">🤝</div>
+        <h4>Referred Students</h4>
+        <p>Track student referrals and assign reward points.</p>
         <div class="module-link-row">Open Module <span class="module-arrow">→</span></div>
     </a>
 
