@@ -43,7 +43,7 @@ require_once "../includes/sidebar.php";
 
 <div class="form-container">
 
-    <h2>Add New Staff</h2>
+    <h2>Add New Faculty</h2>
 
     <?php if (!empty($error)): ?>
         <div class="error-msg"><?php echo $error; ?></div>
@@ -68,12 +68,12 @@ require_once "../includes/sidebar.php";
         <div class="form-group">
             <label>Role</label>
             <select name="role">
-                <option value="staff">Staff</option>
+                <option value="faculty">Faculty</option>
                 <option value="superadmin">Superadmin</option>
             </select>
         </div>
 
-        <button type="submit" class="submit-btn">Create Staff</button>
+        <button type="submit" class="submit-btn">Create Faculty</button>
 
     </form>
 

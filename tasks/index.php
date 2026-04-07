@@ -1,7 +1,7 @@
 <?php
 require_once "../includes/auth.php";
 
-// Allow both superadmin and staff/admin to view this page
+// Allow both superadmin and faculty/admin to view this page
 if (!isset($_SESSION['role'])) {
     header("Location: ../login.php");
     exit();
@@ -9,13 +9,13 @@ if (!isset($_SESSION['role'])) {
 
 require_once dirname(__DIR__) . '/includes/db.php';
 
-// Fetch all active staff and admins
+// Fetch all active faculty and admins
 $query = "
     SELECT a.id, a.username, a.role, 
            (SELECT COUNT(*) FROM tasks t WHERE t.assigned_to = a.id AND t.status = 'pending') as pending_count
     FROM admins a
     WHERE a.status = 'active'
-    ORDER BY FIELD(a.role, 'superadmin', 'admin', 'staff'), a.username ASC
+    ORDER BY FIELD(a.role, 'superadmin', 'admin', 'faculty'), a.username ASC
 ";
 $result = $conn->query($query);
 
@@ -59,7 +59,7 @@ require_once "../includes/sidebar.php";
 }
 .role-superadmin { background: #fdedec; color: #c0392b; }
 .role-admin { background: #e8f8f5; color: #16a085; }
-.role-staff { background: #ebf5fb; color: #2980b9; }
+.role-faculty { background: #ebf5fb; color: #2980b9; }
 
 .task-badge {
     background: #e67e22;
@@ -76,10 +76,10 @@ require_once "../includes/sidebar.php";
 
 <div class="main-content">
     <div class="header-banner" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 25px;">
-        <h2>Staff Task Management</h2>
+        <h2>Faculty Task Management</h2>
     </div>
 
-    <p style="margin-bottom: 20px; color: #555;">Select a staff member or administrator below to view their task board.</p>
+    <p style="margin-bottom: 20px; color: #555;">Select a faculty member or administrator below to view their task board.</p>
 
     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
         <?php if ($result->num_rows > 0): ?>

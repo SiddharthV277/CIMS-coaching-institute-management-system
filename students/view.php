@@ -26,12 +26,12 @@ if (!$student) {
     exit();
 }
 
-/* Fetch Staff Remark from original Admission Request */
-$staff_remark = null;
+/* Fetch Faculty Remark from original Admission Request */
+$faculty_remark = null;
 $stmt_rem = $conn->prepare("SELECT remark FROM admission_requests WHERE (phone = ? OR email = ?) AND status='Approved' ORDER BY id DESC LIMIT 1");
 $stmt_rem->bind_param("ss", $student['phone'], $student['email']);
 $stmt_rem->execute();
-$stmt_rem->bind_result($staff_remark);
+$stmt_rem->bind_result($faculty_remark);
 $stmt_rem->fetch();
 $stmt_rem->close();
 
@@ -80,7 +80,7 @@ require_once "../includes/sidebar.php";
 <div class="profile-info">
     <h2><?php echo htmlspecialchars($student['full_name']); ?></h2>
     <div class="profile-meta">
-        Admission No: <strong><?php echo $student['admission_no']; ?></strong><br>
+        Reg. No: <strong><?php echo $student['registration_no']; ?></strong><br>
         <?php if (!empty($student['registration_no'])): ?>
         Registration No: <strong><?php echo htmlspecialchars($student['registration_no']); ?></strong><br>
         <?php endif; ?>
@@ -99,11 +99,11 @@ echo !empty($student['batch_name'])
 
 </div>
 
-<!-- STAFF REMARKS -->
+<!-- FACULTY REMARKS -->
 <div class="section-card">
-    <h3>Admission Staff Remarks</h3>
+    <h3>Admission Faculty Remarks</h3>
     <div style="background: #f9f9f9; padding: 15px; border-left: 4px solid #7A1E3A; border-radius: 4px; font-style: italic; color: #555;">
-        <?php echo !empty($staff_remark) ? nl2br(htmlspecialchars($staff_remark)) : "No admission remarks recorded for this student."; ?>
+        <?php echo !empty($faculty_remark) ? nl2br(htmlspecialchars($faculty_remark)) : "No admission remarks recorded for this student."; ?>
     </div>
 </div>
 
@@ -281,7 +281,7 @@ echo !empty($student['batch_name'])
     <th>Structure</th>
     <th>Mode</th>
     <th>Date (DD-MM-YYYY)</th>
-    <th>Receipt</th>
+    <th>Receipt No.</th>
 </tr>
 
 <?php foreach($payments as $pay): ?>
@@ -291,11 +291,7 @@ echo !empty($student['batch_name'])
     <td><?php echo $pay['payment_mode']; ?></td>
     <td><?php echo date('d-m-Y', strtotime($pay['payment_date'])); ?></td>
     <td>
-        <?php if(!empty($pay['receipt_image'])): ?>
-        <a href="/cims/uploads/receipts/<?php echo $pay['receipt_image']; ?>" target="_blank">
-            View
-        </a>
-        <?php endif; ?>
+        <?php echo !empty($pay['receipt_number']) ? htmlspecialchars($pay['receipt_number']) : '-'; ?>
     </td>
 </tr>
 <?php endforeach; ?>

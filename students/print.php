@@ -229,7 +229,7 @@ $due = $final_total - $total_paid;
             <h1>Vigyaan Coaching Institute</h1>
             <p>Student Profile & Admission Record</p>
             <p style="margin-top:10px;">
-                <strong>Admission No:</strong> <?php echo htmlspecialchars($student['admission_no']); ?><br>
+                <strong>Reg. No:</strong> <?php echo htmlspecialchars($student['registration_no']); ?><br>
                 <?php if (!empty($student['registration_no'])): ?>
                 <strong>Registration No:</strong> <?php echo htmlspecialchars($student['registration_no']); ?><br>
                 <?php endif; ?>
@@ -342,6 +342,7 @@ $due = $final_total - $total_paid;
                 <th>Mode</th>
                 <th>Type</th>
                 <th>Amount</th>
+                <th>Receipt No.</th>
             </tr>
         </thead>
         <tbody>
@@ -351,6 +352,7 @@ $due = $final_total - $total_paid;
                 <td><?php echo htmlspecialchars($pay['payment_mode']); ?></td>
                 <td><?php echo htmlspecialchars($pay['payment_structure']); ?></td>
                 <td>₹<?php echo number_format($pay['amount'], 2); ?></td>
+                <td><?php echo !empty($pay['receipt_number']) ? htmlspecialchars($pay['receipt_number']) : '-'; ?></td>
             </tr>
             <?php endforeach; ?>
         </tbody>

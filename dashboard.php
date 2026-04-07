@@ -4,16 +4,29 @@
 <?php
 require_once __DIR__ . '/includes/db.php';
 
-/* Collection Stats */
+/* Collection Stats from payments */
 $res = $conn->query("
     SELECT 
         SUM(amount) as total,
         SUM(CASE WHEN MONTH(payment_date)=MONTH(CURDATE()) AND YEAR(payment_date)=YEAR(CURDATE()) THEN amount ELSE 0 END) as month_total
     FROM payments
+    WHERE payment_date >= '2026-03-01'
 ");
 $row = $res->fetch_assoc();
 $totalCollection = $row['total'] ?? 0;
 $monthCollection = $row['month_total'] ?? 0;
+
+/* Collection Stats from misc_receipts */
+$resMisc = $conn->query("
+    SELECT 
+        SUM(amount) as total,
+        SUM(CASE WHEN MONTH(received_date)=MONTH(CURDATE()) AND YEAR(received_date)=YEAR(CURDATE()) THEN amount ELSE 0 END) as month_total
+    FROM misc_receipts
+    WHERE received_date >= '2026-03-01'
+");
+$rowMisc = $resMisc->fetch_assoc();
+$totalCollection += $rowMisc['total'] ?? 0;
+$monthCollection += $rowMisc['month_total'] ?? 0;
 
 /* Batch Stats */
 $batchStats = $conn->query("
@@ -312,17 +325,17 @@ $active_tasks = $tasks_stmt->get_result();
 <div class="dash-section-label">Finance</div>
 <div class="dash-stats-grid">
 
-    <div class="dash-stat-card accent-teal">
+    <a href="analytics/collections.php?view=all" class="dash-stat-card accent-teal" style="text-decoration:none;">
         <div class="dash-stat-icon icon-teal">💰</div>
         <div class="dash-stat-label">Total Collection</div>
         <div class="dash-stat-value" style="font-size:24px;">₹<?php echo number_format($totalCollection, 2); ?></div>
-    </div>
+    </a>
 
-    <div class="dash-stat-card accent-violet">
+    <a href="analytics/collections.php?view=monthly" class="dash-stat-card accent-violet" style="text-decoration:none;">
         <div class="dash-stat-icon icon-violet">📆</div>
         <div class="dash-stat-label">This Month</div>
         <div class="dash-stat-value" style="font-size:24px;">₹<?php echo number_format($monthCollection, 2); ?></div>
-    </div>
+    </a>
 
     <div class="dash-stat-card accent-green">
         <div class="dash-stat-icon icon-green">🏷️</div>
@@ -357,10 +370,10 @@ $active_tasks = $tasks_stmt->get_result();
         <div class="module-link-row">Open Module <span class="module-arrow">→</span></div>
     </a>
 
-    <a href="staff/list.php" class="dash-module-card">
+    <a href="faculty/list.php" class="dash-module-card">
         <div class="module-icon-wrap">🧑‍💼</div>
-        <h4>Staff Management</h4>
-        <p>Manage institute staff accounts and permissions.</p>
+        <h4>Faculty Management</h4>
+        <p>Manage institute faculty accounts and permissions.</p>
         <div class="module-link-row">Open Module <span class="module-arrow">→</span></div>
     </a>
     
@@ -374,7 +387,7 @@ $active_tasks = $tasks_stmt->get_result();
     <a href="tasks/index.php" class="dash-module-card">
         <div class="module-icon-wrap">✅</div>
         <h4>Tasks</h4>
-        <p>Assign and track staff responsibilities and workflow.</p>
+        <p>Assign and track faculty responsibilities and workflow.</p>
         <div class="module-link-row">Open Module <span class="module-arrow">→</span></div>
     </a>
 
@@ -385,12 +398,12 @@ $active_tasks = $tasks_stmt->get_result();
         <div class="module-link-row">Open Module <span class="module-arrow">→</span></div>
     </a>
 
-    <div class="dash-module-card" style="opacity:0.7;cursor:default;">
+    <a href="results/pending.php" class="dash-module-card">
         <div class="module-icon-wrap">🏆</div>
         <h4>Results &amp; Certificates</h4>
-        <p>Generate marksheets and certificates instantly.</p>
-        <span class="coming-soon-badge">Coming Soon</span>
-    </div>
+        <p>Generate marksheets and certificates for completed students.</p>
+        <div class="module-link-row">Open Module <span class="module-arrow">→</span></div>
+    </a>
 
 </div>
 

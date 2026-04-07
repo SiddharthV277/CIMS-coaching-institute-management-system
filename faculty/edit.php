@@ -50,7 +50,7 @@ require_once "../includes/sidebar.php";
 
 <div class="form-container">
 
-    <h2>Edit Staff Role</h2>
+    <h2>Edit Faculty Role</h2>
     <p>Username: <strong><?php echo htmlspecialchars($username); ?></strong></p>
 
     <?php if (!empty($error)): ?>
@@ -63,9 +63,9 @@ require_once "../includes/sidebar.php";
         <div class="form-group">
             <label>Select Role</label>
             <select name="role">
-                <option value="staff" 
-                    <?php if ($current_role === 'staff') echo "selected"; ?>>
-                    Staff
+                <option value="faculty" 
+                    <?php if ($current_role === 'faculty') echo "selected"; ?>>
+                    Faculty
                 </option>
 
                 <option value="superadmin"

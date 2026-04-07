@@ -33,10 +33,10 @@ $error = "";
 // This is necessary since "Other" custom courses do not exist in the courses table.
 $course_fee = floatval($request['total_fees']);
 
-/* ================= STAFF SHORTLIST ================= */
+/* ================= FACULTY SHORTLIST ================= */
 
 if (isset($_POST['save_shortlist']) 
-    && in_array($_SESSION['role'], ['staff','superadmin'])) {
+    && in_array($_SESSION['role'], ['faculty','superadmin'])) {
 
     if (!in_array($request['status'], ['Approved','Rejected'])) {
         /* ================= DISCOUNT LOGIC ================= */
@@ -91,11 +91,13 @@ $final_total = $amount_after_discount + $regFee + $examFee;
 
 $amount = floatval($_POST['payment_amount']);
 
-if ($amount <= 0) {
-    $error = "Payment amount must be greater than 0.";
+if ($amount < 0) {
+    $error = "Payment amount cannot be negative.";
+} elseif ($amount <= 0 && $final_total > 0) {
+    $error = "Payment amount must be greater than 0 when there are fees due.";
 }
 
-if ($amount > $final_total) {
+if ($final_total > 0 && $amount > $final_total) {
     $error = "Amount cannot exceed final payable amount after discount.";
 }
 
@@ -198,9 +200,9 @@ if ($current_count >= $capacity) {
 
 /* Get last admission number of this year */
 $stmt = $conn->prepare("
-    SELECT admission_no 
+    SELECT registration_no 
     FROM students 
-    WHERE admission_no LIKE CONCAT('VIG', ?, '-%')
+    WHERE registration_no LIKE CONCAT('VIG', ?, '-%')
     ORDER BY id DESC 
     LIMIT 1
 ");
@@ -217,7 +219,7 @@ if ($last_adm_no) {
     $sequence = 1;
 }
 
-$admission_no = "VIG".$year."-".str_pad($sequence, 3, "0", STR_PAD_LEFT);
+$registration_no = "VIG".$year."-".str_pad($sequence, 3, "0", STR_PAD_LEFT);
 
             if (!empty($request['photo']) &&
                 file_exists("../uploads/requests/".$request['photo'])) {
@@ -258,7 +260,7 @@ if(empty($final_admission_date) || $final_admission_date == '0000-00-00'){
 
 $stmt = $conn->prepare("
 INSERT INTO students (
-    admission_no,
+    registration_no,
     registration_no,
     full_name,
     dob,
@@ -305,7 +307,7 @@ VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
 
 $stmt->bind_param(
 "sssssssssssssssssssddsissssssssdddsssssis",
-$admission_no,
+$registration_no,
 $registration_no,
 $request['full_name'],
 $request['dob'],
@@ -581,11 +583,11 @@ require_once "../includes/sidebar.php";
     </div>
 </div>
 
-<?php if(in_array($_SESSION['role'], ['staff','superadmin']) 
+<?php if(in_array($_SESSION['role'], ['faculty','superadmin']) 
    && !in_array($request['status'],['Approved','Rejected'])): ?>
 
 <div class="section-card">
-<h3>Staff Shortlist & Payment</h3>
+<h3>Faculty Shortlist & Payment</h3>
 
 <?php if(!empty($error)): ?>
 <p style="color:red;"><?php echo $error; ?></p>
@@ -802,7 +804,7 @@ document.addEventListener("DOMContentLoaded", function(){
 <div class="section-card">
 <h3>Review & Decision</h3>
 
-<p><strong>Staff Remark:</strong> <?php echo $request['remark']; ?></p>
+<p><strong>Faculty Remark:</strong> <?php echo $request['remark']; ?></p>
 <p><strong>Amount Paid:</strong> <?php echo $request['payment_amount']; ?></p>
 <p><strong>Structure:</strong> <?php echo $request['payment_structure']; ?></p>
 <p><strong>Mode:</strong> <?php echo $request['payment_mode']; ?></p>

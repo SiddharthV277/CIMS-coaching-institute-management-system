@@ -32,36 +32,53 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $stmt->close();
 
     $sequence = $count + 1;
-    $admission_no = "VIG".$year."-".str_pad($sequence,3,"0",STR_PAD_LEFT);
+    
+    $registration_no = trim($_POST['registration_no'] ?? '');
+    if ($registration_no === '') {
+        $error = "Registration number is required.";
+    } else {
+        if (substr($registration_no, 0, 3) !== 'MCO') {
+            $registration_no = 'MCO' . $registration_no;
+        }
+    }
 
     /* ================= CALCULATION ENGINE ================= */
 
     $original_total = floatval($_POST['original_total']);
     $base_amount = $original_total - REG_FEE - EXAM_FEE;
+    if ($base_amount < 0) $base_amount = 0;
+
+    $reg_cost = isset($_POST['include_reg_fee']) ? REG_FEE : 0;
+    $exam_cost = isset($_POST['include_exam_fee']) ? EXAM_FEE : 0;
 
     $discount_amount = floatval($_POST['discount_amount']);
     $discount_percent = floatval($_POST['discount_percent']);
 
-    if ($discount_amount > 0) {
+    if ($base_amount > 0 && $discount_amount > 0) {
         $discount_percent = ($discount_amount / $base_amount) * 100;
-    } elseif ($discount_percent > 0) {
+    } elseif ($base_amount > 0 && $discount_percent > 0) {
         $discount_amount = ($base_amount * $discount_percent) / 100;
+    } else {
+        $discount_amount = 0;
+        $discount_percent = 0;
     }
 
-    if ($discount_amount > $base_amount) {
+    if ($base_amount > 0 && $discount_amount > $base_amount) {
         $error = "Discount cannot exceed base amount.";
     }
 
     $new_base = $base_amount - $discount_amount;
-    $total_fees = $new_base + REG_FEE + EXAM_FEE;
+    $total_fees = $new_base + $reg_cost + $exam_cost;
 
     $payment_amount = floatval($_POST['payment_amount']);
 
-    if ($payment_amount <= 0) {
-        $error = "Payment amount must be greater than 0.";
+    if ($payment_amount < 0) {
+        $error = "Payment amount cannot be negative.";
+    } elseif ($payment_amount <= 0 && $total_fees > 0) {
+        $error = "Payment amount must be greater than 0 when there are fees due.";
     }
 
-    if ($payment_amount > $total_fees) {
+    if ($total_fees > 0 && $payment_amount > $total_fees) {
         $error = "Payment cannot exceed final total fees.";
     }
 
@@ -74,7 +91,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         list(, $data)      = explode(',', $data);
         $data = base64_decode($data);
         
-        $new_name = $admission_no.".jpg";
+        $new_name = $registration_no.".jpg";
         file_put_contents("../uploads/students/".$new_name, $data);
         $photo = $new_name;
     }
@@ -90,7 +107,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $error = "Image must be under 1MB.";
         }
         else {
-            $new_name = $admission_no.".".$extension;
+            $new_name = $registration_no.".".$extension;
             move_uploaded_file($_FILES['photo']['tmp_name'],"../uploads/students/".$new_name);
             $photo = $new_name;
         }
@@ -102,8 +119,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     if (empty($error)) {
         $batch_id = intval($_POST['batch_id']);
-        $registration_no = trim($_POST['registration_no'] ?? '');
-        if ($registration_no === '') $registration_no = NULL;
 
         // Server-side uniqueness check for registration_no
         if ($registration_no !== NULL) {
@@ -149,7 +164,6 @@ if ($current_count >= $capacity) {
 
 $stmt = $conn->prepare("
 INSERT INTO students (
-admission_no,
 registration_no,
 full_name,
 dob,
@@ -191,14 +205,14 @@ heard_other_text,
 batch_id,
 receipt_number
 )
-VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 ");
 
             $heard_about = isset($_POST['heard_about']) ? implode(",", $_POST['heard_about']) : "";
             /* ===== PREP VARIABLES FOR BINDING ===== */
 
 $discount_type = ($discount_amount > 0) ? "Amount" : "Percent";
-$final_total_value = $new_base + REG_FEE + EXAM_FEE;   
+$final_total_value = $new_base + $reg_cost + $exam_cost;   
 
 // Fetch batch name
 $stmt_b = $conn->prepare("SELECT batch_name FROM batches WHERE id=?");
@@ -215,8 +229,7 @@ $duration = $_POST['course'] === 'Other' ? $_POST['custom_course_duration'] . " 
 $fee = $_POST['course'] === 'Other' ? $_POST['custom_total_fees'] : $total_fees;
 
 $stmt->bind_param(
-"sssssssssssssssssssddsissssssssdddsssssis",
-$admission_no,
+"ssssssssssssssssssddsissssssssdddsssssis",
 $registration_no,
 $_POST['full_name'],
 $_POST['dob'],
@@ -337,13 +350,13 @@ require_once "../includes/sidebar.php";
 
 <div>
     <label style="font-size:12px; color:#666; display:block; margin-bottom:5px;">Registration No</label>
-    <input type="text" name="registration_no" id="registrationNo" placeholder="Registration No (optional)">
+    <input type="text" name="registration_no" id="registrationNo" placeholder="Registration No" required>
     <small id="regNoWarning" style="color:red; display:none;">This registration number already exists!</small>
 </div>
 <input type="text" name="full_name" placeholder="Full Name" required>
 <div>
     <label style="font-size:12px; color:#666; display:block; margin-bottom:5px;">Date of Birth (DD-MM-YYYY)</label>
-    <input type="date" name="dob">
+    <input type="text" name="dob" class="flatpickr-date" placeholder="DD-MM-YYYY">
 </div>
 <select name="gender">
 <option>Male</option>
@@ -542,7 +555,7 @@ require_once "../includes/sidebar.php";
 
         <div>
             <label style="font-size:12px; color:#666; display:block; margin-bottom:5px;">Admission Date (DD-MM-YYYY)</label>
-            <input type="date" name="admission_date" required>
+            <input type="text" name="admission_date" class="flatpickr-date" required placeholder="DD-MM-YYYY">
         </div>
 
         <select name="batch_id" required>
@@ -569,6 +582,14 @@ Batch <?= $batch['batch_name']; ?>
         <div>
             <label>Total Course Fees</label>
             <input type="number" id="originalFeeDisplay" readonly>
+            <div style="margin-top: 10px; display:flex; flex-direction:column; gap:8px;">
+                <label style="font-size: 13px; font-weight:normal; cursor:pointer;">
+                    <input type="checkbox" name="include_reg_fee" id="includeRegFee" value="1" checked onchange="calculate()"> Include Registration Fee (₹550)
+                </label>
+                <label style="font-size: 13px; font-weight:normal; cursor:pointer;">
+                    <input type="checkbox" name="include_exam_fee" id="includeExamFee" value="1" checked onchange="calculate()"> Include Examination Fee (₹670)
+                </label>
+            </div>
         </div>
 
         <div>
@@ -606,6 +627,7 @@ Batch <?= $batch['batch_name']; ?>
 
         <input type="number"
                step="0.01"
+               min="0"
                name="payment_amount"
                id="paymentAmount"
                placeholder="Amount Paid"
@@ -616,7 +638,7 @@ Batch <?= $batch['batch_name']; ?>
             <input type="number" id="remainingDisplay" readonly>
         </div>
 
-        <select name="payment_structure" required>
+        <select name="payment_structure" id="paymentStructure" required>
             <option value="Full">Full</option>
             <option value="Monthly">Monthly</option>
             <option value="Quarterly">Quarterly</option>
@@ -630,7 +652,7 @@ Batch <?= $batch['batch_name']; ?>
 
         <div>
             <label style="font-size:12px; color:#666; display:block; margin-bottom:5px;">Payment Date (DD-MM-YYYY)</label>
-            <input type="date" name="payment_date" required>
+            <input type="text" name="payment_date" class="flatpickr-date" required placeholder="DD-MM-YYYY">
         </div>
 
         <div class="full-width">
@@ -754,6 +776,9 @@ function calculate(trigger = null) {
     let discountPercentInput = document.getElementById("discountPercent");
     let paymentInput = document.getElementById("paymentAmount");
 
+    let includeReg = document.getElementById("includeRegFee").checked ? REG : 0;
+    let includeExam = document.getElementById("includeExamFee").checked ? EXAM : 0;
+
     let discountAmt = parseFloat(discountAmountInput.value) || 0;
     let discountPct = parseFloat(discountPercentInput.value) || 0;
 
@@ -772,18 +797,44 @@ function calculate(trigger = null) {
         discountAmountInput.value = base.toFixed(2);
     }
 
-    let finalTotal = (base - discountAmt) + REG + EXAM;
+    let finalTotal = (base - discountAmt) + includeReg + includeExam;
 
     if(document.getElementById("amountAfterDiscount")) {
         document.getElementById("amountAfterDiscount").value = (base - discountAmt).toFixed(2);
     }
     document.getElementById("finalTotalDisplay").value = finalTotal.toFixed(2);
-    document.getElementById("remainingDisplay").value =
-        (finalTotal - (parseFloat(paymentInput.value) || 0)).toFixed(2);
+    let remaining = finalTotal - (parseFloat(paymentInput.value) || 0);
+    document.getElementById("remainingDisplay").value = remaining.toFixed(2);
 
     document.getElementById("hiddenOriginal").value = originalTotal;
     document.getElementById("hiddenDiscountAmount").value = discountAmt;
     document.getElementById("hiddenDiscountPercent").value = discountPct;
+
+    // Payment Structure Restrictions
+    let paymentStruct = document.getElementById("paymentStructure");
+    let fullOpt = paymentStruct.querySelector("option[value='Full']");
+
+    // If final total is 0, always lock to Full (free course)
+    if (finalTotal <= 0) {
+        fullOpt.disabled = false;
+        paymentStruct.value = "Full";
+        paymentStruct.style.pointerEvents = "none";
+        paymentStruct.style.opacity = "0.7";
+    } else if (remaining <= 0) {
+        // Paid in full
+        fullOpt.disabled = false;
+        paymentStruct.value = "Full";
+        paymentStruct.style.pointerEvents = "none";
+        paymentStruct.style.opacity = "0.7";
+    } else {
+        // Partial payment — Full not allowed
+        fullOpt.disabled = true;
+        paymentStruct.style.pointerEvents = "auto";
+        paymentStruct.style.opacity = "1";
+        if (paymentStruct.value === "Full") {
+            paymentStruct.value = "Monthly";
+        }
+    }
 }
 
 /* Course Change */
@@ -867,6 +918,27 @@ document.getElementById('registrationNo').addEventListener('blur', function() {
     fetch('check_registration.php?reg_no=' + encodeURIComponent(val))
         .then(r => r.json())
         .then(data => { warn.style.display = data.exists ? 'block' : 'none'; });
+});
+</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+// Init Flatpickr on all date text inputs
+document.querySelectorAll('.flatpickr-date').forEach(function(el) {
+    flatpickr(el, {
+        dateFormat: 'd-m-Y',
+        allowInput: true
+    });
+});
+
+// Before submit, convert dd-mm-yyyy -> yyyy-mm-dd for backend
+document.querySelector('form').addEventListener('submit', function() {
+    document.querySelectorAll('.flatpickr-date').forEach(function(el) {
+        const parts = el.value.split('-');
+        if (parts.length === 3 && parts[2].length === 4) {
+            el.value = parts[2] + '-' + parts[1] + '-' + parts[0];
+        }
+    });
 });
 </script>
 

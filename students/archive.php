@@ -11,7 +11,7 @@ $id = intval($_GET['id']);
 $error = "";
 
 // 1. Verify existence and completion status
-$stmt = $conn->prepare("SELECT admission_no, full_name, status FROM students WHERE id = ?");
+$stmt = $conn->prepare("SELECT registration_no, full_name, status FROM students WHERE id = ?");
 $stmt->bind_param("i", $id);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // 2. Archive student into passed_out_students
                 $archive_query = "
                     INSERT INTO passed_out_students (
-                        admission_no, full_name, dob, gender, phone, email, photo,
+                        registration_no, full_name, dob, gender, phone, email, photo,
                         father_name, mother_name, guardian_phone, address, city, state, pincode,
                         course, batch, admission_date, course_duration, total_fees, fees_paid,
                         status, sequence_no, medium, institution_name, institution_address, degree,
@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         result_summary
                     )
                     SELECT 
-                        admission_no, full_name, dob, gender, phone, email, photo,
+                        registration_no, full_name, dob, gender, phone, email, photo,
                         father_name, mother_name, guardian_phone, address, city, state, pincode,
                         course, batch, admission_date, course_duration, total_fees, fees_paid,
                         status, sequence_no, medium, institution_name, institution_address, degree,
@@ -104,7 +104,7 @@ require_once "../includes/sidebar.php";
 
     <div class="section-card">
         <h3>Current Record Info</h3>
-        <p><strong>Admission No:</strong> <?php echo htmlspecialchars($student['admission_no'] ?? ''); ?></p>
+        <p><strong>Reg. No:</strong> <?php echo htmlspecialchars($student['registration_no'] ?? ''); ?></p>
         <p><strong>Status:</strong> <?php echo htmlspecialchars($student['status'] ?? ''); ?></p>
         <p style="color:red; font-size:0.9em;">Note: Archiving a student will remove them from the active database and move their record permanently to the passed out students log.</p>
     </div>

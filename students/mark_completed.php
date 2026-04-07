@@ -27,7 +27,7 @@ if (!password_verify($verify_password, $hashed_password)) {
 $conn->begin_transaction();
 
 try {
-    $stmt = $conn->prepare("UPDATE students SET status = 'Completed' WHERE id = ?");
+    $stmt = $conn->prepare("UPDATE students SET status = 'Result Pending' WHERE id = ?");
     $stmt->bind_param("i", $student_id);
     if (!$stmt->execute()) {
         throw new Exception("Error updating student status.");

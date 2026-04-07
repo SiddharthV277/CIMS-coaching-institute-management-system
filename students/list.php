@@ -3,15 +3,23 @@ require_once "../includes/auth.php";
 
 require_once dirname(__DIR__) . '/includes/db.php';
 
-/* Fetch students */
+/* Build a map of all reg_nos to find duplicates */
+$all_students = [];
 $result = $conn->query("
-    SELECT id, admission_no, registration_no, full_name, course, batch, phone,
+    SELECT id, registration_no, full_name, course, batch, phone,
            total_fees, fees_paid, final_total, status,
            admission_date, course_duration
     FROM students
-    WHERE status != 'Completed'
-    ORDER BY id DESC
+    WHERE status NOT IN ('Completed', 'Result Pending')
+    ORDER BY CAST(REGEXP_REPLACE(registration_no, '[^0-9]', '') AS UNSIGNED) DESC
 ");
+
+$reg_counts = [];
+while($r = $result->fetch_assoc()) {
+    $all_students[] = $r;
+    $reg = $r['registration_no'];
+    $reg_counts[$reg] = ($reg_counts[$reg] ?? 0) + 1;
+}
 
 /* SUCCESS MESSAGE */
 $success_message = "";
@@ -21,7 +29,7 @@ if (isset($_GET['success'])) {
     if ($_GET['success'] === "added") {
         $success_message = "Student added successfully.";
     } elseif ($_GET['success'] === "completed") {
-        $success_message = "Student marked as completed and moved to archives.";
+        $success_message = "Student marked as Done — moved to Result Generation queue.";
     }
 }
 
@@ -55,7 +63,6 @@ require_once "../includes/sidebar.php";
     <table>
         <thead>
             <tr>
-                <th>Admission No</th>
                 <th>Reg. No</th>
                 <th>Name</th>
                 <th>Course</th>
@@ -71,23 +78,32 @@ require_once "../includes/sidebar.php";
 
         <tbody>
 
-        <?php while ($row = $result->fetch_assoc()): 
+        <?php foreach($all_students as $row):
             $final_total = $row['final_total'] > 0 ? $row['final_total'] : $row['total_fees'];
             $due = $final_total - $row['fees_paid'];
             
             // Check for Subscription Expiry
             $duration_months = (int) preg_replace('/\D/', '', $row['course_duration']);
-            if($duration_months == 0) $duration_months = 12; // Fallback if format is weird
+            if($duration_months == 0) $duration_months = 12;
             
             $expiry_time = strtotime("+" . $duration_months . " months", strtotime($row['admission_date']));
             $is_expired = (time() > $expiry_time);
+            
+            $is_duplicate = ($reg_counts[$row['registration_no']] ?? 0) > 1;
         ?>
 
-            <tr>
+            <tr<?php echo $is_duplicate ? ' class="dup-row" data-student-id="'.$row['id'].'" data-original-reg="'.htmlspecialchars($row['registration_no']).'"' : ''; ?>>
 
-                <td><strong><?php echo $row['admission_no']; ?></strong></td>
-
-                <td><?php echo htmlspecialchars($row['registration_no'] ?? ''); ?></td>
+                <td>
+                    <?php if($is_duplicate): ?>
+                        <strong style="color:#dc2626;" title="Duplicate registration number! Will auto-revert in 10 minutes.">
+                            ⚠ <?php echo htmlspecialchars($row['registration_no'] ?? ''); ?>
+                        </strong>
+                        <br><small style="color:#dc2626; font-size:10px;">Duplicate — edit to fix</small>
+                    <?php else: ?>
+                        <strong><?php echo htmlspecialchars($row['registration_no'] ?? ''); ?></strong>
+                    <?php endif; ?>
+                </td>
 
                 <td><?php echo htmlspecialchars($row['full_name']); ?></td>
 
@@ -146,7 +162,7 @@ require_once "../includes/sidebar.php";
 
             </tr>
 
-        <?php endwhile; ?>
+        <?php endforeach; ?>
 
         </tbody>
     </table>
@@ -190,6 +206,33 @@ setTimeout(function() {
         setTimeout(() => popup.remove(), 500);
     }
 }, 3000);
+
+// ── Duplicate Reg. No. Auto-Revert (10 minutes) ──
+const REVERT_DELAY = 10 * 60 * 1000; // 10 minutes in ms
+const dupRows = document.querySelectorAll('tr.dup-row');
+dupRows.forEach(function(row) {
+    const studentId  = row.dataset.studentId;
+    const originalReg = row.dataset.originalReg;
+    if (!studentId) return;
+
+    setTimeout(function() {
+        // Check if the page is still open and this row still exists
+        if (!document.contains(row)) return;
+        fetch('revert_reg.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'student_id=' + encodeURIComponent(studentId)
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.reverted) {
+                // Reload so the list refreshes cleanly
+                location.reload();
+            }
+        })
+        .catch(() => {});
+    }, REVERT_DELAY);
+});
 </script>
 
 <?php require_once "../includes/footer.php"; ?>

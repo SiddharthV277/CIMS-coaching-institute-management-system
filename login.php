@@ -182,7 +182,7 @@ button:hover {
     <div class="logo-text">VIGYAAN</div>
     <div class="logo-sub">ADMIN PORTAL</div>
 
-    <h2>Staff Login</h2>
+    <h2>Faculty Login</h2>
 
     <?php if (!empty($error)) : ?>
         <div class="error-message"><?php echo $error; ?></div>

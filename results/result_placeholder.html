@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mark Sheet</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Outfit:wght@300;400;500;600&family=Tiro+Devanagari+Hindi:ital@0;1&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            background-color: #f1f5f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            padding: 20px 0;
+        }
+
+        /* Non-print UI Controls */
+        .print-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .print-btn {
+            background: #0f172a;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+
+        .print-btn:hover { background: #1e293b; }
+        
+        @media print {
+            body { background: white; padding: 0; }
+            .print-controls { display: none; }
+            .marksheet-wrapper { 
+                box-shadow: none !important; 
+                margin: 0 !important;
+                background-image: none !important;
+            }
+        }
+
+        /* Mark Sheet Styling */
+        .marksheet-wrapper {
+            width: 210mm;
+            height: 297mm;
+            background: #ffffff;
+            box-sizing: border-box;
+            padding: 10mm;
+            position: relative;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+
+        .watermark {
+            position: absolute;
+            top: 55%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 350px;
+            height: auto;
+            opacity: 0.04;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .border-outer {
+            width: 100%;
+            height: 100%;
+            border: 2px solid #cbd5e1;
+            padding: 2mm;
+            box-sizing: border-box;
+            position: relative;
+            z-index: 1;
+        }
+
+        .border-inner {
+            width: 100%;
+            height: 100%;
+            border: 5px solid #0f172a;
+            box-sizing: border-box;
+            padding: 4mm 6mm;
+            position: relative;
+            background: transparent;
+            outline: 2px solid #eab308;
+            outline-offset: -8px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .corner {
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            border: 3px solid #eab308;
+        }
+        .corner-tl { top: 6px; left: 6px; border-right: none; border-bottom: none; }
+        .corner-tr { top: 6px; right: 6px; border-left: none; border-bottom: none; }
+        .corner-bl { bottom: 6px; left: 6px; border-right: none; border-top: none; }
+        .corner-br { bottom: 6px; right: 6px; border-left: none; border-top: none; }
+
+        /* Header Section */
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 3mm;
+            margin-bottom: 3mm;
+        }
+
+        .logo-box { width: 25mm; }
+        .logo-box img { width: 100%; height: auto; }
+
+        .center-title {
+            text-align: center;
+            flex: 1;
+            padding: 0 10px;
+        }
+
+        .center-title h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 28px;
+            color: #0f172a;
+            margin: 0;
+            line-height: 1.1;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .center-title h2 {
+            font-size: 16px;
+            color: #eab308;
+            margin: 4px 0 0 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .center-title .tagline {
+            font-family: 'Tiro Devanagari Hindi', serif;
+            font-size: 16px;
+            color: #166534; /* Dark green for the hindi text as in original */
+            margin-top: 5px;
+            font-weight: 600;
+        }
+
+        .center-title .address {
+            font-size: 10px;
+            color: #64748b;
+            margin-top: 3px;
+        }
+
+        .photo-box-wrap { width: 28mm; display: flex; justify-content: flex-end; }
+        .photo-box {
+            width: 25mm;
+            height: 32mm;
+            border: 2px solid #0f172a;
+            padding: 2px;
+            background: #f8fafc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            box-sizing: border-box;
+            position: relative;
+        }
+        .photo-box img { width: 100%; height: 100%; object-fit: cover; }
+        .photo-placeholder { font-size: 9px; color: #94a3b8; text-align: center; }
+
+        /* Meta details */
+        .meta-section {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #475569;
+            margin-bottom: 2mm;
+            font-weight: 500;
+        }
+
+        .meta-value {
+            font-family: 'Caveat', cursive;
+            font-size: 20px;
+            color: #0f172a;
+            font-weight: 600;
+            border-bottom: 1px dotted #94a3b8;
+            padding: 0 5px;
+        }
+
+        /* Title */
+        .main-title {
+            text-align: center;
+            margin: 2mm 0 4mm 0;
+        }
+        
+        .main-title span {
+            background-color: #9f1239; /* Deep Red matching the image */
+            color: #ffffff;
+            font-family: 'Playfair Display', serif;
+            font-size: 22px;
+            font-weight: 700;
+            padding: 5px 25px;
+            border-radius: 20px;
+            letter-spacing: 2px;
+        }
+
+        /* Student Details */
+        .student-details {
+            font-size: 13px;
+            line-height: 1.8;
+            color: #334155;
+            margin-bottom: 3mm;
+            text-align: justify;
+        }
+
+        .data-fill {
+            font-family: 'Caveat', cursive;
+            font-size: 20px;
+            font-weight: 600;
+            color: #0f172a;
+            border-bottom: 1px dotted #94a3b8;
+            padding: 0 5px;
+            display: inline-block;
+        }
+
+        /* Marks Table */
+        .marks-table-wrapper {
+            margin-bottom: 3mm;
+            flex-grow: 1;
+        }
+
+        .marks-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .marks-table th, .marks-table td {
+            border: 1px solid #cbd5e1;
+            padding: 4px 6px;
+            text-align: center;
+        }
+
+        .marks-table th {
+            background-color: #f8fafc;
+            color: #9f1239;
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .marks-table td {
+            color: #0f172a;
+            font-weight: 500;
+        }
+
+        .marks-table .subject-col {
+            text-align: left;
+            font-weight: 600;
+        }
+
+        #marks-body tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        .watermark-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 80px;
+            font-family: 'Playfair Display', serif;
+            color: #f1f5f9;
+            opacity: 0.5;
+            z-index: 0;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        /* Totals Area */
+        .totals-section {
+            border-top: 1px solid #cbd5e1;
+            border-bottom: 1px solid #cbd5e1;
+            padding: 3mm 0;
+            margin-bottom: 3mm;
+        }
+
+        .totals-row-1 {
+            font-size: 13px;
+            color: #334155;
+            text-align: center;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .totals-row-2 {
+            display: flex;
+            justify-content: space-around;
+            font-size: 14px;
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        /* Bottom Layout */
+        .bottom-layout {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: auto;
+        }
+
+        .medal-col {
+            width: 30mm;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .legend-col {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+        }
+
+        .legend-table {
+            border-collapse: collapse;
+            font-size: 9px;
+            text-align: left;
+            width: 90%;
+        }
+
+        .legend-table th, .legend-table td {
+            border: 1px solid #cbd5e1;
+            padding: 3px 5px;
+            color: #334155;
+        }
+
+        .legend-table th {
+            text-align: center;
+            background: #f8fafc;
+            color: #0f172a;
+        }
+
+        .sig-col {
+            width: 40mm;
+            text-align: center;
+        }
+
+        .sig-line {
+            border-bottom: 1px solid #0f172a;
+            margin-bottom: 5px;
+            height: 20px;
+        }
+
+        .sig-col p {
+            margin: 0;
+            font-size: 12px;
+            font-weight: 600;
+            color: #9f1239;
+        }
+
+        .empty-row td {
+            color: transparent !important;
+            height: 24px; /* consistent row height */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="print-controls">
+        <button class="print-btn" onclick="window.print()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            Print Result
+        </button>
+    </div>
+
+    <div class="marksheet-wrapper">
+        <img src="vigyaan-logo.png" alt="Watermark" class="watermark">
+        
+        <div class="border-outer">
+            <div class="border-inner">
+                <div class="corner corner-tl"></div>
+                <div class="corner corner-tr"></div>
+                <div class="corner corner-bl"></div>
+                <div class="corner corner-br"></div>
+
+                <div class="header-section">
+                    <div class="logo-box">
+                        <img src="vigyaan-logo.png" alt="Vigyaan Logo" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2YxZjVmOSIvPjwvc3ZnPg=='">
+                    </div>
+                    
+                    <div class="center-title">
+                        <h1>VIGYAAN</h1>
+                        <h2>Computer Education Center</h2>
+                        <div class="address">Corporate Office : Sirkha Toli, Namkum, Ranchi (Jharkhand)-834010</div>
+                    </div>
+
+                    <div class="photo-box-wrap">
+                        <div class="photo-box">
+                            <img id="disp-photo" src="" alt="Student Photo" style="display:none;">
+                            <span class="photo-placeholder" id="disp-photo-pl" style="display:block;">PHOTO</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="meta-section">
+                    <div class="meta-item">Mark sheet No : <span class="meta-value" id="disp-marksheetNo">[Reg No]</span></div>
+                    <div class="meta-item">Mark sheet Issued Year : <span class="meta-value" id="disp-year">2024</span></div>
+                </div>
+
+                <div class="main-title">
+                    <span>MARK SHEET</span>
+                </div>
+
+                <div class="student-details">
+                    This is to certify that Mr./Ms. <span class="data-fill" id="disp-studentName" style="min-width: 150px;">[Student Name]</span>,
+                    Son/Daughter of <span class="data-fill" id="disp-fatherName" style="min-width: 120px;">[Father's Name]</span> 
+                    and <span class="data-fill" id="disp-motherName" style="min-width: 120px;">[Mother's Name]</span>,
+                    has successfully completed the course <span class="data-fill" id="disp-courseName" style="min-width: 200px;">[Course Name]</span>.
+                    The duration of the course was from <span class="data-fill" id="disp-startDate" style="min-width: 60px;">[Start]</span> 
+                    to <span class="data-fill" id="disp-endDate" style="min-width: 60px;">[End]</span>.
+                    We issue this mark sheet obtained by you in the computer-based test conducted through our institute's assessment.
+                </div>
+
+                <div class="marks-table-wrapper" style="position: relative;">
+                    <!-- Subtle text watermark in the table area -->
+                    <div class="watermark-text">MeToWe</div>
+
+                    <table class="marks-table">
+                        <thead>
+                            <tr>
+                                <th rowspan="2" style="width: 8%;">S.No.</th>
+                                <th rowspan="2" style="text-align: left; width: 40%;">Subject Name</th>
+                                <th rowspan="2" style="width: 15%;">Exam Type</th>
+                                <th colspan="2">Total Marks</th>
+                                <th rowspan="2" style="width: 15%;">Obtain Marks</th>
+                            </tr>
+                            <tr>
+                                <th style="width: 11%;">MAX</th>
+                                <th style="width: 11%;">MIN</th>
+                            </tr>
+                        </thead>
+                        <tbody id="marks-body">
+                            <!-- Rows will be injected dynamically by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="totals-section">
+                    <div class="totals-row-1">
+                        YOUR OBTAINED TOTAL MARKS <span class="data-fill" id="disp-obtainedMarks" style="font-size:16px;">[245]</span> 
+                        FROM <span class="data-fill" id="disp-maxMarks" style="font-size:16px;">[300]</span>
+                    </div>
+                    <div class="totals-row-2">
+                        <span>PERCENTAGE: <span class="data-fill" id="disp-percentage" style="border-bottom:none; color:#b91c1c;">[81.6%]</span></span>
+                        <span>DIVISION: <span class="data-fill" id="disp-division" style="border-bottom:none; color:#b91c1c;">[1st Division]</span></span>
+                        <span>GRADE: <span class="data-fill" id="disp-grade" style="border-bottom:none; color:#b91c1c;">[A+]</span></span>
+                    </div>
+                </div>
+
+                <div class="bottom-layout">
+                    <!-- Medal -->
+                    <div class="medal-col">
+                        <svg width="50" height="75" viewBox="0 0 24 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Red Ribbons -->
+                            <path d="M4 0V20L12 16L20 20V0H4Z" fill="#9f1239" stroke="#7f1d1d" stroke-width="0.5"/>
+                            <!-- Gold jagged edge medal -->
+                            <path d="M12 18 L14.5 20 L17.5 19 L19 21.5 L22 22 L21.5 25 L23.5 27.5 L21.5 30 L22 33 L19 33.5 L17.5 36 L14.5 35 L12 37 L9.5 35 L6.5 36 L5 33.5 L2 33 L2.5 30 L0.5 27.5 L2.5 25 L2 22 L5 21.5 L6.5 19 L9.5 20 L12 18Z" fill="#eab308"/>
+                            <circle cx="12" cy="27.5" r="5" fill="#fef08a" stroke="#ca8a04" stroke-width="0.5"/>
+                        </svg>
+                    </div>
+
+                    <!-- Grading Legend -->
+                    <div class="legend-col">
+                        <table class="legend-table">
+                            <thead>
+                                <tr>
+                                    <th colspan="3">Classification of Grade</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>90% OR ABOVE</td><td>DISTINCTION</td><td>DISTINCTION</td></tr>
+                                <tr><td>75% TO 89.9%</td><td>A+</td><td>1ST DIVISION</td></tr>
+                                <tr><td>60% TO 74.9%</td><td>A</td><td>1ST DIVISION</td></tr>
+                                <tr><td>50% TO 59.9%</td><td>B</td><td>2ND DIVISION</td></tr>
+                                <tr><td>40% TO 49.9%</td><td>C</td><td>3RD DIVISION</td></tr>
+                                <tr><td>BELOW 40%</td><td>FAIL</td><td>FAIL</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Signature -->
+                    <div class="sig-col">
+                        <div class="sig-line">
+                            <img src="" id="disp-signature" alt="Signature" style="height: 30px; display: none; margin: -10px auto 0 auto;">
+                        </div>
+                        <p>Seal & Sign</p>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const dataStr = localStorage.getItem('currentStudentData');
+            
+            function formatMonthYear(dateString) {
+                if(!dateString) return '';
+                try {
+                    const d = new Date(dateString + '-01'); 
+                    const month = d.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+                    const year = d.getFullYear().toString().substr(-2);
+                    return `${month}-${year}`;
+                } catch(e) {
+                    return dateString;
+                }
+            }
+
+            if(dataStr) {
+                try {
+                    const data = JSON.parse(dataStr);
+                    
+                    document.getElementById('disp-studentName').textContent = data.studentName || '_____________';
+                    document.getElementById('disp-fatherName').textContent = data.fatherName || data.guardianName || '_____________';
+                    document.getElementById('disp-motherName').textContent = data.motherName || '_____________';
+                    document.getElementById('disp-marksheetNo').textContent = data.enrollmentNo || '_____________';
+                    document.getElementById('disp-courseName').textContent = data.courseName || '_____________';
+                    document.getElementById('disp-grade').textContent = data.grade || '___';
+                    
+                    document.getElementById('disp-startDate').textContent = formatMonthYear(data.startDate) || '_______';
+                    document.getElementById('disp-endDate').textContent = formatMonthYear(data.endDate) || '_______';
+                    
+                    document.getElementById('disp-obtainedMarks').textContent = data.obtainedMarks || '___';
+                    document.getElementById('disp-maxMarks').textContent = data.maxMarks || '___';
+                    
+                    let pVal = data.percentage || '___';
+                    if(pVal !== '___' && !pVal.includes('%')) pVal += '%';
+                    document.getElementById('disp-percentage').textContent = pVal;
+                    document.getElementById('disp-division').textContent = data.division || '___';
+
+                    // Parse the arrays and render rows dynamically
+                    let names = data.subjectName || [];
+                    let types = data.subjectType || [];
+                    let marks = data.subjectMarks || [];
+                    
+                    // In case there was only 1 subject, JS might parse as string 
+                    if(typeof names === 'string') names = [names];
+                    if(typeof types === 'string') types = [types];
+                    if(typeof marks === 'string') marks = [marks];
+
+                    const tbody = document.getElementById('marks-body');
+                    tbody.innerHTML = '';
+                    
+                    if(names.length > 0) {
+                        for(let i=0; i<names.length; i++) {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td>${i+1}</td>
+                                <td class="subject-col">${names[i] || ''}</td>
+                                <td>${types[i] || 'Theory'}</td>
+                                <td>100</td>
+                                <td>33</td>
+                                <td><strong>${marks[i] || '0'}</strong></td>
+                            `;
+                            tbody.appendChild(tr);
+                        }
+                    }
+
+                    // Pad empty rows to maintain visual structure (minimum 6 rows)
+                    const totalRows = Math.max(6, names.length);
+                    for(let i = names.length; i < totalRows; i++) {
+                        const tr = document.createElement('tr');
+                        tr.className = 'empty-row';
+                        tr.innerHTML = `<td>${i+1}</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>`;
+                        tbody.appendChild(tr);
+                    }
+
+                    if (data.issueDate) {
+                        const d = new Date(data.issueDate);
+                        document.getElementById('disp-year').textContent = d.getFullYear();
+                    }
+                    
+                    // Handle Photo
+                    if(data.photoUrl) {
+                        const imgEl = document.getElementById('disp-photo');
+                        imgEl.src = data.photoUrl;
+                        imgEl.style.display = 'block';
+                        document.getElementById('disp-photo-pl').style.display = 'none';
+                    }
+                } catch(e) {
+                    console.error("Error parsing data", e);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -10,7 +10,7 @@ $success_message = "";
 
 if (isset($_GET['success'])) {
     if ($_GET['success'] === "added") {
-        $success_message = "Staff added successfully.";
+        $success_message = "Faculty added successfully.";
     }
     elseif ($_GET['success'] === "role_updated") {
     $success_message = "Role updated successfully.";
@@ -30,8 +30,8 @@ require_once "../includes/sidebar.php";
 <div class="table-container">
 
     <div class="table-header">
-        <h2>Staff Management</h2>
-        <a href="add.php" class="add-btn">+ Add Staff</a>
+        <h2>Faculty Management</h2>
+        <a href="add.php" class="add-btn">+ Add Faculty</a>
     </div>
 
     <table>
@@ -59,7 +59,7 @@ require_once "../includes/sidebar.php";
                     <?php if ($row['role'] === 'superadmin'): ?>
                         <span class="role-badge role-superadmin">Superadmin</span>
                     <?php else: ?>
-                        <span class="role-badge role-staff">Staff</span>
+                        <span class="role-badge role-faculty">Faculty</span>
                     <?php endif; ?>
                 </td>
 

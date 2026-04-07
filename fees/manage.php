@@ -12,7 +12,7 @@ $student_id = intval($_GET['student_id']);
 /* ================= FETCH STUDENT ================= */
 
 $stmt = $conn->prepare("
-    SELECT id, full_name, admission_no,
+    SELECT id, full_name, registration_no,
            total_fees, fees_paid, final_total,
            payment_structure, admission_date
     FROM students
@@ -166,8 +166,8 @@ require_once "../includes/sidebar.php";
 
     <div class="summary-grid">
         <div class="summary-box">
-            <strong>Admission No</strong>
-            <span><?php echo $student['admission_no']; ?></span>
+            <strong>Reg. No</strong>
+            <span><?php echo $student['registration_no']; ?></span>
         </div>
         <div class="summary-box">
             <strong>Structure</strong>

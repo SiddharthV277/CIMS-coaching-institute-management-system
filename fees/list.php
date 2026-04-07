@@ -8,7 +8,7 @@ $query = "
 SELECT 
     s.id,
     s.full_name,
-    s.admission_no,
+    s.registration_no,
     s.total_fees,
     s.fees_paid,
     s.final_total,
@@ -22,7 +22,7 @@ SELECT
 FROM students s
 LEFT JOIN fee_installments fi ON s.id = fi.student_id
 GROUP BY s.id
-ORDER BY s.full_name ASC
+ORDER BY CAST(REGEXP_REPLACE(s.registration_no, '[^0-9]', '') AS UNSIGNED) DESC
 ";
 
 $result = $conn->query($query);
@@ -39,7 +39,7 @@ require_once "../includes/sidebar.php";
 
 <table class="fee-table">
 <tr>
-    <th>Admission No</th>
+    <th>Reg. No</th>
     <th>Name</th>
     <th>Structure</th>
     <th>Total</th>
@@ -82,7 +82,7 @@ else {
 ?>
 
 <tr>
-    <td><?php echo $row['admission_no']; ?></td>
+    <td><?php echo htmlspecialchars($row['registration_no'] ?? ''); ?></td>
     <td><?php echo htmlspecialchars($row['full_name']); ?></td>
     <td><?php echo $row['payment_structure']; ?></td>
     <td>₹<?php echo number_format($final_total,2); ?></td>

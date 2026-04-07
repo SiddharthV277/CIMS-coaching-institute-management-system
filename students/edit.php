@@ -45,7 +45,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $error = "Image size must be under 1MB.";
         }
         else {
-            $new_name = $student['admission_no'] . "." . $extension;
+            $new_name = $student['registration_no'] . "_" . time() . "." . $extension;
+
+            if (!empty($student['photo']) && file_exists("../uploads/students/" . $student['photo'])) {
+                unlink("../uploads/students/" . $student['photo']);
+            }
 
             move_uploaded_file(
                 $_FILES['photo']['tmp_name'],
@@ -58,20 +62,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     if (empty($error)) {
         $registration_no = trim($_POST['registration_no'] ?? '');
-        if ($registration_no === '') $registration_no = NULL;
-
-        // Server-side uniqueness check for registration_no (exclude current student)
-        if ($registration_no !== NULL) {
-            $chk = $conn->prepare("SELECT COUNT(*) FROM students WHERE registration_no = ? AND id != ?");
-            $chk->bind_param("si", $registration_no, $id);
-            $chk->execute();
-            $chk->bind_result($dup);
-            $chk->fetch();
-            $chk->close();
-            if ($dup > 0) {
-                $error = "Registration number already exists.";
+        if ($registration_no === '') {
+            $error = "Registration number is required.";
+        } else {
+            if (substr($registration_no, 0, 3) !== 'MCO') {
+                $registration_no = 'MCO' . $registration_no;
             }
         }
+
+        // Duplicate check removed — duplicates are highlighted in the student list and can be corrected there.
     }
 
     if (empty($error)) {
@@ -101,10 +100,15 @@ WHERE id=?
 
 $course_duration_with_months = $_POST['course_duration'] . " Months";
 
+// Convert dob from dd-mm-yyyy to Y-m-d for DB
+$dob_raw = trim($_POST['dob'] ?? '');
+$dob_parsed = $dob_raw ? DateTime::createFromFormat('d-m-Y', $dob_raw) : null;
+$dob_db = $dob_parsed ? $dob_parsed->format('Y-m-d') : null;
+
 $stmt->bind_param(
 "sssssssssssssssssssssssssssi",
 $_POST['full_name'],
-$_POST['dob'],
+$dob_db,
 $_POST['gender'],
 $_POST['phone'],
 $_POST['email'],
@@ -168,12 +172,12 @@ require_once "../includes/sidebar.php";
 <input type="text" name="full_name" value="<?php echo $student['full_name']; ?>" required>
 <div>
     <label style="font-size:12px; color:#666; display:block; margin-bottom:5px;">Registration No</label>
-    <input type="text" name="registration_no" id="registrationNo" value="<?php echo htmlspecialchars($student['registration_no'] ?? ''); ?>" placeholder="Registration No (optional)">
-    <small id="regNoWarning" style="color:red; display:none;">This registration number already exists!</small>
+    <input type="text" name="registration_no" id="registrationNo" value="<?php echo htmlspecialchars($student['registration_no'] ?? ''); ?>" placeholder="Registration No" required>
+
 </div>
 <div>
     <label style="font-size:12px; color:#666; display:block; margin-bottom:5px;">Date of Birth (DD-MM-YYYY)</label>
-    <input type="date" name="dob" value="<?php echo $student['dob']; ?>">
+    <input type="text" name="dob" class="flatpickr-date" value="<?php echo $student['dob'] ? date('d-m-Y', strtotime($student['dob'])) : ''; ?>" placeholder="DD-MM-YYYY">
 </div>
 <select name="gender">
 <option value="Male" <?php if($student['gender']=="Male") echo "selected"; ?>>Male</option>
@@ -293,8 +297,8 @@ readonly>
 
 <div class="floating-field">
 <label>Admission Date (DD-MM-YYYY)</label>
-<input type="date"
-value="<?php echo $student['admission_date']; ?>"
+<input type="text"
+value="<?php echo $student['admission_date'] ? date('d-m-Y', strtotime($student['admission_date'])) : ''; ?>"
 readonly>
 </div>
 
@@ -333,15 +337,15 @@ placeholder="Receipt / Transaction Number">
 
 </form>
 
-<?php require_once "../includes/footer.php"; ?>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
-// Registration No duplicate check (exclude current student)
-document.getElementById('registrationNo').addEventListener('blur', function() {
-    const val = this.value.trim();
-    const warn = document.getElementById('regNoWarning');
-    if (!val) { warn.style.display = 'none'; return; }
-    fetch('check_registration.php?reg_no=' + encodeURIComponent(val) + '&exclude_id=<?php echo $id; ?>')
-        .then(r => r.json())
-        .then(data => { warn.style.display = data.exists ? 'block' : 'none'; });
+document.querySelectorAll('.flatpickr-date').forEach(function(el) {
+    flatpickr(el, {
+        dateFormat: 'd-m-Y',
+        altInput: false,
+        allowInput: true
+    });
 });
 </script>
+<?php require_once "../includes/footer.php"; ?>

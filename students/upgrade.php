@@ -11,7 +11,7 @@ $id = intval($_GET['id']);
 $error = "";
 
 // Fetch the student
-$stmt = $conn->prepare("SELECT full_name, admission_no, status, course, batch, total_fees, fees_paid FROM students WHERE id = ?");
+$stmt = $conn->prepare("SELECT full_name, registration_no, status, course, batch, total_fees, fees_paid FROM students WHERE id = ?");
 $stmt->bind_param("i", $id);
 $stmt->execute();
 $student = $stmt->get_result()->fetch_assoc();
@@ -48,10 +48,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $discount_amount = floatval($_POST['discount_amount'] ?? 0);
         $discount_percent = floatval($_POST['discount_percent'] ?? 0);
         
-        $regFee = 550;
-        $examFee = 670;
+        $regFee = isset($_POST['include_reg_fee']) ? 550 : 0;
+        $examFee = isset($_POST['include_exam_fee']) ? 670 : 0;
         
-        $base_amount = $new_total_fees - $regFee - $examFee;
+        $base_amount = $new_total_fees - 550 - 670;
         if($base_amount < 0) $base_amount = 0;
         
         if ($discount_amount > 0) {
@@ -143,7 +143,7 @@ require_once "../includes/sidebar.php";
 
     <div class="section-card">
         <h3>Current Record Info</h3>
-        <p><strong>Admission No:</strong> <?php echo htmlspecialchars($student['admission_no'] ?? ''); ?></p>
+        <p><strong>Reg. No:</strong> <?php echo htmlspecialchars($student['registration_no'] ?? ''); ?></p>
         <p><strong>Previous Course:</strong> <?php echo htmlspecialchars($student['course'] ?? ''); ?> (<?php echo htmlspecialchars($student['batch'] ?? ''); ?>)</p>
         <p style="color:red; font-size:0.9em;">Note: Upgrading will wipe out their old unpaid fee installments and reset their total fees tracking to 0, placing them back in the Active students roster.</p>
     </div>
@@ -186,6 +186,14 @@ require_once "../includes/sidebar.php";
             <div class="input-group">
                 <label>Total Course Fees</label>
                 <input type="number" step="0.01" name="total_fees" id="totalFeesField" required>
+                <div style="margin-top: 10px; display:flex; flex-direction:column; gap:8px;">
+                    <label style="font-size: 13px; font-weight:normal; cursor:pointer;">
+                        <input type="checkbox" name="include_reg_fee" id="includeRegFee" value="1" checked onchange="calculate()"> Include Registration Fee (₹550)
+                    </label>
+                    <label style="font-size: 13px; font-weight:normal; cursor:pointer;">
+                        <input type="checkbox" name="include_exam_fee" id="includeExamFee" value="1" checked onchange="calculate()"> Include Examination Fee (₹670)
+                    </label>
+                </div>
             </div>
             
             <div class="input-group">
@@ -248,12 +256,15 @@ function calculate(trigger = null) {
         discountAmountInput.value = discountAmt.toFixed(2);
     }
 
+    let includeReg = document.getElementById("includeRegFee").checked ? REG : 0;
+    let includeExam = document.getElementById("includeExamFee").checked ? EXAM : 0;
+
     if (discountAmt > base) {
         discountAmt = base;
         discountAmountInput.value = base.toFixed(2);
     }
 
-    let finalTotal = (base - discountAmt) + REG + EXAM;
+    let finalTotal = (base - discountAmt) + includeReg + includeExam;
 
     document.getElementById("amountAfterDiscount").value = (base - discountAmt).toFixed(2);
     document.getElementById("finalTotalDisplay").value = finalTotal.toFixed(2);

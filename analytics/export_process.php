@@ -81,7 +81,7 @@ exit();
 
 fputcsv($output,[
 
-"Admission No",
+"Reg. No",
 "Sequence No",
 "Student Name",
 "Gender",
@@ -134,7 +134,7 @@ $query = "
 
 SELECT
 
-s.admission_no,
+s.registration_no,
 s.sequence_no,
 s.full_name,
 s.gender,
@@ -200,7 +200,7 @@ while($row = $result->fetch_assoc()){
 
 fputcsv($output,[
 
-$row['admission_no'],
+$row['registration_no'],
 $row['sequence_no'],
 $row['full_name'],
 $row['gender'],

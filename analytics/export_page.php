@@ -15,7 +15,7 @@ if(isset($_GET['month']) && isset($_GET['year'])){
 
 $query = "
 SELECT
-s.admission_no,
+s.registration_no,
 s.full_name,
 s.course,
 b.batch_name,
@@ -107,7 +107,7 @@ Preview Data
 <table class="preview-table">
 
 <tr>
-<th>Admission No</th>
+<th>Reg. No</th>
 <th>Name</th>
 <th>Course</th>
 <th>Batch</th>
@@ -123,7 +123,7 @@ Preview Data
 
 <tr>
 
-<td><?php echo $row['admission_no']; ?></td>
+<td><?php echo $row['registration_no']; ?></td>
 <td><?php echo $row['full_name']; ?></td>
 <td><?php echo $row['course']; ?></td>
 <td><?php echo $row['batch_name']; ?></td>

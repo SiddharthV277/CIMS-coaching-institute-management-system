@@ -74,7 +74,7 @@ if (isset($_POST['move_student'])) {
 
 /* Fetch students in this batch */
 $stmt = $conn->prepare("
-    SELECT id, full_name, admission_no, phone, status
+    SELECT id, full_name, registration_no, phone, status
     FROM students
     WHERE batch_id=?
     ORDER BY full_name ASC
@@ -114,7 +114,7 @@ require_once "../includes/sidebar.php";
 <div class="table-responsive">
 <table class="student-table">
 <tr>
-    <th>Admission No</th>
+    <th>Reg. No</th>
     <th>Name</th>
     <th>Phone</th>
     <th>Status</th>
@@ -123,7 +123,7 @@ require_once "../includes/sidebar.php";
 
 <?php while($student = $students->fetch_assoc()): ?>
 <tr>
-    <td><?php echo $student['admission_no']; ?></td>
+    <td><?php echo $student['registration_no']; ?></td>
     <td><?php echo $student['full_name']; ?></td>
     <td><?php echo $student['phone']; ?></td>
     <td><?php echo $student['status']; ?></td>

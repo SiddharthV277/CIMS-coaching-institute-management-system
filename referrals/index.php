@@ -1,7 +1,7 @@
 <?php
 require_once "../includes/auth.php";
 
-if (!in_array($_SESSION['role'], ['admin', 'superadmin', 'staff'])) {
+if (!in_array($_SESSION['role'], ['admin', 'superadmin', 'faculty'])) {
     header("Location: ../dashboard.php");
     exit();
 }

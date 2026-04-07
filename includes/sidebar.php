@@ -9,6 +9,7 @@ require_once __DIR__ . '/db.php';
 
 /* Get pending + shortlisted count */
 $pending_count = 0;
+$result_pending_count = 0;
 
 if ($conn->connect_error === false) {
 
@@ -20,6 +21,11 @@ if ($conn->connect_error === false) {
 
     if ($result) {
         $pending_count = $result->fetch_assoc()['total'];
+    }
+
+    $result2 = $conn->query("SELECT COUNT(*) as total FROM students WHERE status = 'Result Pending'");
+    if ($result2) {
+        $result_pending_count = $result2->fetch_assoc()['total'];
     }
 }
 ?>
@@ -34,12 +40,19 @@ if ($conn->connect_error === false) {
         Dashboard
     </a>
 
-    <a href="/cims/staff/list.php" class="nav-link">
-        Staff Management
+    <a href="/cims/faculty/list.php" class="nav-link">
+        Faculty Management
     </a>
 
     <a href="/cims/students/list.php" class="nav-link">
         Student Records
+    </a>
+
+    <a href="/cims/results/pending.php" class="nav-link">
+        Result Generation
+        <?php if ($result_pending_count > 0): ?>
+            <span class="nav-badge"><?php echo $result_pending_count; ?></span>
+        <?php endif; ?>
     </a>
     
     <a href="/cims/students/passed.php" class="nav-link">
@@ -67,6 +80,12 @@ if ($conn->connect_error === false) {
     <a href="/cims/referrals/index.php" class="nav-link">
         Referred Students
     </a>
+
+    <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'superadmin'): ?>
+    <a href="/cims/misc_receipts/index.php" class="nav-link">
+        Miscellaneous Receipts
+    </a>
+    <?php endif; ?>
 
 </div>
 
